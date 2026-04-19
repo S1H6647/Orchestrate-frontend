@@ -11,14 +11,35 @@ import {
   useOrganizationQuery,
   useOrganizationBySlug,
 } from "@/lib/query/organization-hooks";
+import { getOrgPermissions } from "@/lib/permissions/org-permissions";
 import { toDateLabel } from "@/lib/utils";
 
-const quickLinks = (orgId: string) => [
-  { href: `/organizations/${orgId}/settings`, icon: <Settings size={16} />, label: "Settings", desc: "Manage organization settings" },
-  { href: `/organizations/${orgId}/members`, icon: <Users size={16} />, label: "Members", desc: "View and manage members" },
-  { href: `/organizations/${orgId}/invitations`, icon: <Mail size={16} />, label: "Invitations", desc: "Pending & sent invitations" },
-  { href: `/organizations/${orgId}/projects`, icon: <FolderKanban size={16} />, label: "Projects", desc: "Browse all projects" },
-];
+const getQuickLinks = (slug: string, perms: ReturnType<typeof getOrgPermissions>) => {
+  const links = [
+    { href: `/organizations/${slug}/members`, icon: <Users size={16} />, label: "Members", desc: "View and manage members" },
+    { href: `/organizations/${slug}/projects`, icon: <FolderKanban size={16} />, label: "Projects", desc: "Browse all projects" },
+  ];
+
+  if (perms.canManageOrganizationSettings) {
+    links.unshift({ 
+      href: `/organizations/${slug}/settings`, 
+      icon: <Settings size={16} />, 
+      label: "Settings", 
+      desc: "Manage organization settings" 
+    });
+  }
+
+  if (perms.canManageInvitations) {
+    links.push({ 
+      href: `/organizations/${slug}/invitations`, 
+      icon: <Mail size={16} />, 
+      label: "Invitations", 
+      desc: "Pending & sent invitations" 
+    });
+  }
+
+  return links;
+};
 
 export default function OrganizationDetailPage() {
   const params = useParams<{ slug: string }>();
@@ -26,6 +47,8 @@ export default function OrganizationDetailPage() {
 
   const resolveQuery = useOrganizationBySlug(slug);
   const organizationId = resolveQuery.data?.id;
+  const myRole = (resolveQuery.data as any)?.myRole;
+  const perms = getOrgPermissions(myRole);
 
   const organizationQuery = useOrganizationQuery(organizationId as string);
 
@@ -82,9 +105,11 @@ export default function OrganizationDetailPage() {
             <p className="page-description">{org.description || "No description provided."}</p>
           </div>
         </div>
-        <Link href={`/organizations/${slug}/settings`}>
-          <Button variant="ghost" size="sm" icon={<Settings size={14} />}>Settings</Button>
-        </Link>
+        {perms.canManageOrganizationSettings && (
+          <Link href={`/organizations/${slug}/settings`}>
+            <Button variant="ghost" size="sm" icon={<Settings size={14} />}>Settings</Button>
+          </Link>
+        )}
       </div>
 
       {/* Stats */}
@@ -150,7 +175,7 @@ export default function OrganizationDetailPage() {
       <div>
         <h2 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: "var(--text)" }}>Quick Access</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "12px" }}>
-          {quickLinks(slug).map((item) => (
+          {getQuickLinks(slug, perms).map((item) => (
             <Link key={item.href} href={item.href}>
               <div
                 className="card"

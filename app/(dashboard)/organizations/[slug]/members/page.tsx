@@ -20,6 +20,7 @@ import {
   useRestoreMemberMutation,
   useUpdateRoleMutation,
 } from "@/lib/query/organization-hooks";
+import { getOrgPermissions } from "@/lib/permissions/org-permissions";
 
 const roles: OrganizationRole[] = ["ADMIN", "MEMBER", "VIEWER"];
 
@@ -55,6 +56,7 @@ export default function MembersPage() {
   const restoreMutation = useRestoreMemberMutation(organizationId as string);
 
   const [pendingRemoveUser, setPendingRemoveUser] = useState<string | null>(null);
+  const [viewMember, setViewMember] = useState<any | null>(null);
 
   const myMembership = useMemo(() => {
     const meEmail = meQuery.data?.email;
@@ -63,7 +65,7 @@ export default function MembersPage() {
   }, [membersQuery.data, meQuery.data?.email]);
 
   const myRole = myMembership?.role;
-  const canManage = canManageMembers(myRole);
+  const perms = getOrgPermissions(myRole as any);
 
   const isLoading = resolveQuery.isLoading || (!!organizationId && membersQuery.isLoading);
 
@@ -92,7 +94,7 @@ export default function MembersPage() {
             {membersQuery.data.length} member{membersQuery.data.length !== 1 ? "s" : ""} &middot; manage roles and access
           </p>
         </div>
-        {!canManage && (
+        {!perms.canChangeMemberRoles && (
           <Alert tone="info">You don&apos;t have permission to change member roles.</Alert>
         )}
       </div>
@@ -105,7 +107,7 @@ export default function MembersPage() {
                 <th>Member</th>
                 <th>Status</th>
                 <th>Role</th>
-                <th style={{ width: 120 }}>Actions</th>
+                {perms.canRemoveMembers && <th style={{ width: 120 }}>Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -117,7 +119,12 @@ export default function MembersPage() {
                 const isMe = member.user.email === meQuery.data?.email;
 
                 return (
-                  <tr key={member.user.id}>
+                  <tr 
+                    key={member.user.id} 
+                    onClick={() => !perms.canRemoveMembers && setViewMember(member)}
+                    style={{ cursor: !perms.canRemoveMembers ? "pointer" : "default" }}
+                    className={!perms.canRemoveMembers ? "hoverable-row" : ""}
+                  >
                     <td>
                       <div className="row" style={{ gap: "10px" }}>
                         <div
@@ -170,7 +177,7 @@ export default function MembersPage() {
                       </span>
                     </td>
                     <td>
-                      {canManage && canMutate ? (
+                      {perms.canChangeMemberRoles && canMutate ? (
                         <Select
                           value={member.role}
                           disabled={updateRoleMutation.isPending}
@@ -191,30 +198,36 @@ export default function MembersPage() {
                         <RoleBadge role={member.role} />
                       )}
                     </td>
-                    <td>
-                      {member.status !== "REMOVED" ? (
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          disabled={!canManage || !canMutate}
-                          onClick={() => setPendingRemoveUser(member.user.id)}
-                        >
-                          Remove
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={!canManage || !canMutate}
-                          onClick={async () => {
-                            await restoreMutation.mutateAsync(member.user.id);
-                            push({ title: "Member restored", kind: "success" });
-                          }}
-                        >
-                          Restore
-                        </Button>
-                      )}
-                    </td>
+                    {perms.canRemoveMembers && (
+                      <td>
+                        {member.status !== "REMOVED" ? (
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            disabled={!canMutate}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPendingRemoveUser(member.user.id);
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={!canMutate}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              await restoreMutation.mutateAsync(member.user.id);
+                              push({ title: "Member restored", kind: "success" });
+                            }}
+                          >
+                            Restore
+                          </Button>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -236,6 +249,57 @@ export default function MembersPage() {
           setPendingRemoveUser(null);
         }}
       />
+      <ConfirmDialog
+        open={!!viewMember}
+        title="Member Details"
+        description="Public profile details for this organization member."
+        onCancel={() => setViewMember(null)}
+        onConfirm={() => setViewMember(null)}
+        confirmLabel="Close"
+        tone="primary"
+      >
+        {viewMember && (
+          <div className="form-grid">
+            <div className="row" style={{ gap: "16px", marginBottom: "10px" }}>
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: "50%",
+                  background: "var(--primary)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 18,
+                  fontWeight: 700,
+                  color: "#fff",
+                }}
+              >
+                {getInitials(viewMember.user.name)}
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 16 }}>{viewMember.user.name}</div>
+                <div style={{ color: "var(--text-muted)", fontSize: 14 }}>{viewMember.user.email}</div>
+              </div>
+            </div>
+            <div className="form-grid two">
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Role</div>
+                <div style={{ marginTop: 4 }}><RoleBadge role={viewMember.role} /></div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</div>
+                <div style={{ marginTop: 4 }}>
+                   <span className={`badge ${viewMember.status === 'ACTIVE' ? 'badge-success' : 'badge-muted'}`}>
+                    {viewMember.status}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </ConfirmDialog>
+
     </div>
   );
 }

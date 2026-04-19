@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingState } from "@/components/ui/loading-state";
 import { useProjectsQuery } from "@/lib/query/project-hooks";
 import { useOrganizationBySlug } from "@/lib/query/organization-hooks";
+import { getOrgPermissions } from "@/lib/permissions/org-permissions";
 import { toDateLabel } from "@/lib/utils";
 
 export default function ProjectsPage() {
@@ -18,6 +19,8 @@ export default function ProjectsPage() {
 
   const resolveQuery = useOrganizationBySlug(slug);
   const organizationId = resolveQuery.data?.id;
+  const myRole = (resolveQuery.data as any)?.myRole;
+  const perms = getOrgPermissions(myRole);
 
   const projectsQuery = useProjectsQuery(organizationId as string);
 
@@ -46,9 +49,11 @@ export default function ProjectsPage() {
           <h1 className="page-title">Projects</h1>
           <p className="page-description">Track all projects available in this organization.</p>
         </div>
-        <Link href={`/organizations/${slug}/projects/new`}>
-          <Button icon={<Plus size={18} />}>Create project</Button>
-        </Link>
+        {perms.canCreateProject && (
+          <Link href={`/organizations/${slug}/projects/new`}>
+            <Button icon={<Plus size={18} />}>Create project</Button>
+          </Link>
+        )}
       </div>
 
       {projectsQuery.isError ? (
