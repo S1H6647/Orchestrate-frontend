@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useMemo, useState, useEffect } from "react";
 import { Save, Trash2, Lock, Globe, FileText, Fingerprint, Camera, Building2 } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
@@ -23,11 +23,12 @@ import {
 } from "@/lib/query/organization-hooks";
 import { useMeQuery } from "@/lib/query/auth-hooks";
 import { orgSchema } from "@/lib/validation";
+import { getOrgPermissions } from "@/lib/permissions/org-permissions";
 
 export default function OrganizationSettingsPage() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
-
+  const router = useRouter();
   const { push } = useToast();
 
   const resolveQuery = useOrganizationBySlug(slug);
@@ -46,8 +47,15 @@ export default function OrganizationSettingsPage() {
     return membersQuery.data.find((member) => member.user.email === meEmail)?.role ?? null;
   }, [membersQuery.data, meQuery.data?.email]);
 
+  const perms = getOrgPermissions(myRole as any);
   const isLoading = resolveQuery.isLoading || (!!organizationId && (organizationQuery.isLoading || membersQuery.isLoading));
   const isError = resolveQuery.isError || (!resolveQuery.isLoading && !organizationId) || organizationQuery.isError;
+
+  useEffect(() => {
+    if (!isLoading && !perms.canManageOrganizationSettings) {
+      router.replace(`/organizations/${slug}`);
+    }
+  }, [isLoading, perms.canManageOrganizationSettings, router, slug]);
 
   if (isLoading) {
     return (
@@ -180,6 +188,22 @@ export default function OrganizationSettingsPage() {
                   Delete Organization
                 </Button>
               </div>
+            </div>
+          </Card>
+        )}
+
+        {(isOwner || isAdmin) && (
+          <Card>
+            <div className="card-header">
+              <div>
+                <div className="card-title">Invitations</div>
+                <div className="card-desc">Manage organization invitation links and pending recipients.</div>
+              </div>
+            </div>
+            <div className="row" style={{ justifyContent: "flex-end" }}>
+              <Button variant="outline" onClick={() => router.push(`/organizations/${slug}/invitations`)}>
+                Open Invitations
+              </Button>
             </div>
           </Card>
         )}
