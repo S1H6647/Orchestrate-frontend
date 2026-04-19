@@ -22,6 +22,7 @@ import {
   useResendInvitationMutation,
 } from "@/lib/query/organization-hooks";
 import { inviteSchema } from "@/lib/validation";
+import { getOrgPermissions } from "@/lib/permissions/org-permissions";
 
 export default function InvitationsPage() {
   const params = useParams<{ slug: string }>();
@@ -30,6 +31,8 @@ export default function InvitationsPage() {
 
   const resolveQuery = useOrganizationBySlug(slug);
   const organizationId = resolveQuery.data?.id;
+  const myRole = resolveQuery.data?.myRole;
+  const perms = getOrgPermissions(myRole);
 
   const invitationsQuery = useOrganizationInvitationsQuery(organizationId as string);
   const inviteMutation = useInviteMemberMutation(organizationId as string);
@@ -41,6 +44,13 @@ export default function InvitationsPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [cancelInviteId, setCancelInviteId] = useState<string | null>(null);
+  const [viewInvitation, setViewInvitation] = useState<{
+    email: string;
+    role: string;
+    status: string;
+    expiresAt: string;
+    token: string;
+  } | null>(null);
 
   const isLoading = resolveQuery.isLoading || (!!organizationId && invitationsQuery.isLoading);
 
@@ -56,6 +66,14 @@ export default function InvitationsPage() {
     return (
       <div className="page-shell">
         <Alert tone="error">Could not find organization for invitation.</Alert>
+      </div>
+    );
+  }
+
+  if (!perms.canManageInvitations) {
+    return (
+      <div className="page-shell">
+        <Alert tone="error">You do not have access to invitations.</Alert>
       </div>
     );
   }
@@ -98,8 +116,11 @@ export default function InvitationsPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Invitations</h1>
-          <p className="page-description">Invite teammates and manage pending invitations.</p>
+          <p className="page-description">Invite teammates and manage pending invitations. This page is intentionally separate from the sidebar.</p>
         </div>
+        <Link href={`/organizations/${slug}/settings`}>
+          <Button variant="ghost">Back to Settings</Button>
+        </Link>
       </div>
 
       {/* Invite form */}
@@ -217,11 +238,13 @@ export default function InvitationsPage() {
                         >
                           Cancel
                         </Button>
-                        <Link href={`/invitations/${invitation.token}`}>
-                          <Button variant="secondary" size="sm">
-                            View
-                          </Button>
-                        </Link>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setViewInvitation(invitation)}
+                        >
+                          View
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -245,6 +268,47 @@ export default function InvitationsPage() {
         }}
         loading={cancelMutation.isPending}
       />
+      <ConfirmDialog
+        open={!!viewInvitation}
+        title="Invitation Details"
+        description="Share this link with the recipient if they didn't receive the email."
+        onCancel={() => setViewInvitation(null)}
+        onConfirm={() => setViewInvitation(null)}
+        confirmLabel="Close"
+        tone="primary"
+      >
+        {viewInvitation && (
+          <div className="form-grid" style={{ gap: "20px" }}>
+            <div className="form-grid two">
+              <FormField label="Recipient">
+                <Input value={viewInvitation.email} readOnly />
+              </FormField>
+              <FormField label="Target Role">
+                <Input value={viewInvitation.role} readOnly />
+              </FormField>
+            </div>
+            
+            <div className="form-grid two">
+              <FormField label="Status">
+                <Input value={viewInvitation.status} readOnly />
+              </FormField>
+              <FormField label="Expires">
+                <Input value={new Date(viewInvitation.expiresAt).toLocaleDateString()} readOnly />
+              </FormField>
+            </div>
+
+            <FormField label="Invitation Link (Copy manually if needed)">
+              <div className="input-wrapper">
+                <Input 
+                  value={`${typeof window !== 'undefined' ? window.location.origin : ''}/invitations/${viewInvitation.token}`} 
+                  readOnly 
+                />
+              </div>
+            </FormField>
+          </div>
+        )}
+      </ConfirmDialog>
+
     </div>
   );
 }

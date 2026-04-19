@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { useLogoutMutation, useMeQuery } from "@/lib/query/auth-hooks";
 import { useMyOrganizationsQuery } from "@/lib/query/organization-hooks";
+import { getOrgPermissions } from "@/lib/permissions/org-permissions";
+import type { OrganizationRole, OrganizationSummary } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "orchestrate:sidebar-collapsed";
@@ -95,7 +97,10 @@ export function Sidebar() {
 
   const orgSlug = params.slug;
   const user = meQuery.data;
-  const organizations = organizationsQuery.data ?? [];
+  const organizations = (organizationsQuery.data ?? []).filter((organization) => {
+    const membershipStatus = organization.membershipStatus?.toUpperCase();
+    return !membershipStatus || membershipStatus === "ACTIVE";
+  });
 
   const [expandedOrgs, setExpandedOrgs] = useState<Record<string, boolean>>({});
 
@@ -129,52 +134,81 @@ export function Sidebar() {
       isActive: pathname === "/organizations/new",
       collapsed,
     },
+    {
+      href: "/invitations",
+      icon: <Mail size={18} />,
+      label: "My Invitations",
+      isActive: pathname === "/invitations" || pathname.startsWith("/invitations/"),
+      collapsed,
+    },
   ];
 
-  const getOrgSubItems = (slug: string): NavItemProps[] => [
-    {
-      href: `/organizations/${slug}`,
-      icon: <Building2 size={16} />,
-      label: "Overview",
-      isActive: pathname === `/organizations/${slug}`,
-      collapsed,
-    },
-    {
-      href: `/organizations/${slug}/settings`,
-      icon: <Settings size={16} />,
-      label: "Settings",
-      isActive: pathname === `/organizations/${slug}/settings`,
-      collapsed,
-    },
-    {
-      href: `/organizations/${slug}/members`,
-      icon: <Users size={16} />,
-      label: "Members",
-      isActive: pathname === `/organizations/${slug}/members`,
-      collapsed,
-    },
-    {
-      href: `/organizations/${slug}/invitations`,
-      icon: <Mail size={16} />,
-      label: "Invitations",
-      isActive: pathname === `/organizations/${slug}/invitations`,
-      collapsed,
-    },
-    {
-      href: `/organizations/${slug}/projects`,
-      icon: <FolderKanban size={16} />,
-      label: "Projects",
-      isActive: pathname === `/organizations/${slug}/projects`,
-      collapsed,
-    },
-    {
-      href: `/organizations/${slug}/projects/new`,
-      icon: <FolderPlus size={16} />,
-      label: "New Project",
-      isActive: pathname === `/organizations/${slug}/projects/new`,
-      collapsed,
-    },
-  ];
+  const getOrgSubItems = (slug: string, role?: OrganizationRole): NavItemProps[] => {
+    const perms = getOrgPermissions(role);
+    const items: NavItemProps[] = [];
+
+    if (perms.canViewOverview) {
+      items.push({
+        href: `/organizations/${slug}`,
+        icon: <Building2 size={16} />,
+        label: "Overview",
+        isActive: pathname === `/organizations/${slug}`,
+        collapsed,
+      });
+    }
+
+    if (perms.canManageOrganizationSettings) {
+      items.push({
+        href: `/organizations/${slug}/settings`,
+        icon: <Settings size={16} />,
+        label: "Settings",
+        isActive: pathname === `/organizations/${slug}/settings`,
+        collapsed,
+      });
+    }
+
+    if (perms.canViewMembers) {
+      items.push({
+        href: `/organizations/${slug}/members`,
+        icon: <Users size={16} />,
+        label: "Members",
+        isActive: pathname === `/organizations/${slug}/members`,
+        collapsed,
+      });
+    }
+
+    if (perms.canManageInvitations) {
+      items.push({
+        href: `/organizations/${slug}/invitations`,
+        icon: <Mail size={16} />,
+        label: "Invitations",
+        isActive: pathname === `/organizations/${slug}/invitations`,
+        collapsed,
+      });
+    }
+
+    if (perms.canViewProjects) {
+      items.push({
+        href: `/organizations/${slug}/projects`,
+        icon: <FolderKanban size={16} />,
+        label: "Projects",
+        isActive: pathname === `/organizations/${slug}/projects`,
+        collapsed,
+      });
+    }
+
+    if (perms.canCreateProject) {
+      items.push({
+        href: `/organizations/${slug}/projects/new`,
+        icon: <FolderPlus size={16} />,
+        label: "New Project",
+        isActive: pathname === `/organizations/${slug}/projects/new`,
+        collapsed,
+      });
+    }
+
+    return items;
+  };
 
   return (
     <aside className={cn("sidebar", collapsed && "collapsed")}>
@@ -200,7 +234,7 @@ export function Sidebar() {
           <>
             <div className="divider" style={{ marginTop: "10px", marginBottom: "4px" }} />
             <div className="sidebar-section-label">My Organizations</div>
-            {organizations.map((org) => {
+            {organizations.map((org: OrganizationSummary) => {
               const isActiveOrg = org.slug === orgSlug;
               const isExpanded = expandedOrgs[org.slug] && isActiveOrg; 
               // We only render children for the active org currently, but keep state per org.
@@ -238,7 +272,7 @@ export function Sidebar() {
                   >
                     <div className="sidebar-subnav-inner">
                       <div style={{ display: "flex", flexDirection: "column", gap: "2px", marginLeft: "12px", borderLeft: "1px solid var(--sidebar-border)", paddingLeft: "10px", marginTop: "4px", marginBottom: "8px" }}>
-                        {getOrgSubItems(org.slug).map((subItem) => (
+                        {getOrgSubItems(org.slug, org.myRole).map((subItem) => (
                           <Link
                             key={subItem.href}
                             href={subItem.href}
