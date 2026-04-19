@@ -1,9 +1,10 @@
 import { apiRequest } from "@/lib/api/http";
 import {
   CreateOrganizationRequest,
-  InvitationAcceptResponse,
+  MemberAddedToOrganizationResponse,
   InvitationResponse,
   InviteMemberRequest,
+  MyInvitationResponse,
   OrganizationMember,
   OrganizationResponse,
   OrganizationSummary,
@@ -18,7 +19,7 @@ export function getAllOrganizations() {
 }
 
 export function getMyOrganizations() {
-  return apiRequest<OrganizationResponse[]>("/organizations/my-organizations", { auth: true });
+  return apiRequest<OrganizationSummary[]>("/organizations/my-organizations", { auth: true });
 }
 
 export function createOrganization(input: CreateOrganizationRequest, image?: File | null) {
@@ -93,8 +94,8 @@ export function inviteOrganizationMember(organizationId: string, input: InviteMe
   });
 }
 
-export function acceptOrganizationInvitation(token: string) {
-  return apiRequest<InvitationAcceptResponse>("/organizations/invitations/accept", {
+export function acceptOrganizationInvite(token: string) {
+  return apiRequest<MemberAddedToOrganizationResponse>("/organizations/invitations/accept", {
     search: { token },
     auth: true,
   });
@@ -128,6 +129,12 @@ export function restoreMember(organizationId: string, userId: string) {
 
 export function getOrganizationInvitations(organizationId: string) {
   return apiRequest<InvitationResponse[]>(`/organizations/${organizationId}/invitations`, {
+    auth: true,
+  });
+}
+
+export function getMyInvitations() {
+  return apiRequest<MyInvitationResponse[]>("/organizations/invitations/me", {
     auth: true,
   });
 }

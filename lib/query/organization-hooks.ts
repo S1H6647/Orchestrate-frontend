@@ -1,14 +1,17 @@
 "use client";
 
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMeQuery } from "@/lib/query/auth-hooks";
 import {
-  acceptOrganizationInvitation,
+  acceptOrganizationInvite,
   cancelInvitation,
   createOrganization,
   declineInvitation,
   deleteOrganization,
   getAllOrganizations,
   getMyOrganizationContext,
+  getMyInvitations,
   getMyOrganizations,
   getOrganization,
   getOrganizationInvitations,
@@ -70,6 +73,13 @@ export function useMyOrganizationContextQuery() {
   return useQuery({
     queryKey: queryKeys.myOrganizationContext,
     queryFn: getMyOrganizationContext,
+  });
+}
+
+export function useMyInvitationsQuery() {
+  return useQuery({
+    queryKey: queryKeys.myInvitations,
+    queryFn: getMyInvitations,
   });
 }
 
@@ -201,7 +211,7 @@ export function useValidateInvitationMutation() {
 
 export function useAcceptInvitationMutation() {
   return useMutation({
-    mutationFn: acceptOrganizationInvitation,
+    mutationFn: acceptOrganizationInvite,
   });
 }
 
@@ -211,12 +221,24 @@ export function useDeclineInvitationMutation() {
   });
 }
 export function useOrganizationBySlug(slug?: string) {
-  const { data: organizations, isLoading, isError } = useMyOrganizationsQuery();
+  const { data: organizations, isLoading: isOrgsLoading, isError: isOrgsError } = useMyOrganizationsQuery();
   const organization = organizations?.find((o) => o.slug === slug);
+  
+  // Backup: find ourselves in the members list if role is missing in summary
+  const membersQuery = useOrganizationMembersQuery(organization?.id as string);
+  const meQuery = useMeQuery();
+  
+  const myRole = useMemo(() => {
+    if (organization?.myRole) return organization.myRole;
+    
+    const meEmail = meQuery.data?.email;
+    if (!meEmail || !membersQuery.data) return null;
+    return membersQuery.data.find((m) => m.user.email === meEmail)?.role ?? null;
+  }, [organization?.myRole, meQuery.data?.email, membersQuery.data]);
 
   return {
-    data: organization,
-    isLoading: isLoading,
-    isError: isError || (!isLoading && !!slug && !organization),
+    data: organization ? { ...organization, myRole } : undefined,
+    isLoading: isOrgsLoading || (!!organization && membersQuery.isLoading),
+    isError: isOrgsError || (!isOrgsLoading && !!slug && !organization),
   };
 }

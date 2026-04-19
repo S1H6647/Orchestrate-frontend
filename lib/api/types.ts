@@ -136,7 +136,17 @@ export type InvitationResponse = {
   status: string;
 };
 
-export type InvitationAcceptResponse = {
+export type MyInvitationResponse = {
+  organizationId: string;
+  organizationName: string;
+  organizationSlug: string;
+  role: OrganizationRole;
+  token: string;
+  expiresAt: string;
+  status: MemberStatus;
+};
+
+export type MemberAddedToOrganizationResponse = {
   memberId: string;
   user: {
     id: string;
