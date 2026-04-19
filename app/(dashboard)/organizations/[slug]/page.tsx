@@ -176,11 +176,17 @@ export default function OrganizationDetailPage() {
         <h2 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: "var(--text)" }}>Quick Access</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "12px" }}>
           {getQuickLinks(slug, perms).map((item) => (
-            <Link key={item.href} href={item.href}>
+            <Link
+              key={item.href}
+              href={item.href}
+              style={{ textDecoration: "none", display: "block", height: "100%" }}
+            >
               <div
                 className="card"
                 style={{
                   padding: "16px 20px",
+                  minHeight: 108,
+                  height: "100%",
                   cursor: "pointer",
                   transition: "all 160ms ease",
                   display: "flex",

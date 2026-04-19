@@ -16,7 +16,8 @@ export class ApiClientError extends Error {
 
 export function normalizeError(payload: unknown, status: number, fallback: string) {
   if (!payload || typeof payload !== "object") {
-    return new ApiClientError(fallback, status, "Unknown");
+    const message = typeof payload === "string" ? payload : fallback;
+    return new ApiClientError(message, status, "Unknown");
   }
   const parsed = payload as Partial<ApiErrorResponse>;
   return new ApiClientError(
