@@ -29,10 +29,6 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (loggedIn && (pathname === "/login" || pathname === "/register" || pathname.startsWith("/verify"))) {
-    return NextResponse.redirect(new URL("/organizations", request.url));
-  }
-
   if (pathname === "/") {
     return NextResponse.redirect(new URL(loggedIn ? "/organizations" : "/login", request.url));
   }
