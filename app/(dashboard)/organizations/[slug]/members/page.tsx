@@ -61,7 +61,7 @@ export default function MembersPage() {
       await updateRoleMutation.mutateAsync({ userId: member.user.id, role: newRole });
       push({ title: "Role updated", kind: "success" });
     } catch (err: any) {
-      push({ title: "Failed to update role", message: err.message, kind: "error" });
+      push({ title: "Failed to update role", description: err.message, kind: "error" });
     }
   };
 
@@ -70,7 +70,7 @@ export default function MembersPage() {
       await removeMutation.mutateAsync(userId);
       push({ title: "Member removed", kind: "success" });
     } catch (err: any) {
-      push({ title: "Failed to remove member", message: err.message, kind: "error" });
+      push({ title: "Failed to remove member", description: err.message, kind: "error" });
     }
   };
 
@@ -79,7 +79,7 @@ export default function MembersPage() {
       await restoreMutation.mutateAsync(userId);
       push({ title: "Member restored", kind: "success" });
     } catch (err: any) {
-      push({ title: "Failed to restore member", message: err.message, kind: "error" });
+      push({ title: "Failed to restore member", description: err.message, kind: "error" });
     }
   };
 
@@ -310,7 +310,7 @@ function MemberRow({
 }: { 
   member: OrganizationMember;
   myEmail?: string;
-  myRole?: OrganizationRole;
+  myRole?: OrganizationRole | null;
   perms: ReturnType<typeof getOrgPermissions>;
   onRoleChange: (member: OrganizationMember, role: OrganizationRole) => void;
   onRemove: (id: string) => void;
@@ -403,7 +403,7 @@ function MemberMobileCard({
 }: { 
   member: OrganizationMember;
   myEmail?: string;
-  myRole?: OrganizationRole;
+  myRole?: OrganizationRole | null;
   perms: ReturnType<typeof getOrgPermissions>;
   onRoleChange: (member: OrganizationMember, role: OrganizationRole) => void;
   onRemove: (id: string) => void;

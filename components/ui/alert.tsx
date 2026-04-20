@@ -12,11 +12,13 @@ const icons = {
 type Props = {
   children: ReactNode;
   tone?: "info" | "error" | "success";
+  className?: string;
+  style?: React.CSSProperties;
 };
 
-export function Alert({ children, tone = "info" }: Props) {
+export function Alert({ children, tone = "info", className = "", style }: Props) {
   return (
-    <div className={`alert alert-${tone}`}>
+    <div className={`alert alert-${tone} ${className}`} style={style}>
       <span style={{ flexShrink: 0, marginTop: "1px" }}>{icons[tone]}</span>
       <span>{children}</span>
     </div>

@@ -47,7 +47,7 @@ export default function OrganizationDetailPage() {
 
   const resolveQuery = useOrganizationBySlug(slug);
   const organizationId = resolveQuery.data?.id;
-  const myRole = (resolveQuery.data as any)?.myRole;
+  const myRole = resolveQuery.data?.myRole;
   const perms = getOrgPermissions(myRole);
 
   const organizationQuery = useOrganizationQuery(organizationId as string);

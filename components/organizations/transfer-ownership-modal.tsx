@@ -53,7 +53,7 @@ export function TransferOwnershipModal({ open, onClose, organizationId }: Props)
     }
   };
 
-  const otherMembers = members?.filter((m) => m.role !== "OWNER" && m.user.id !== me?.id) || [];
+  const otherMembers = members?.content.filter((m) => m.role !== "OWNER" && m.user.id !== me?.id) || [];
 
   return (
     <ConfirmDialog

@@ -44,10 +44,10 @@ export default function OrganizationSettingsPage() {
   const myRole = useMemo(() => {
     const meEmail = meQuery.data?.email;
     if (!meEmail || !membersQuery.data) return null;
-    return membersQuery.data.find((member) => member.user.email === meEmail)?.role ?? null;
+    return membersQuery.data.content.find((member) => member.user.email === meEmail)?.role ?? null;
   }, [membersQuery.data, meQuery.data?.email]);
 
-  const perms = getOrgPermissions(myRole as any);
+  const perms = getOrgPermissions(myRole);
   const isLoading = resolveQuery.isLoading || (!!organizationId && (organizationQuery.isLoading || membersQuery.isLoading));
   const isError = resolveQuery.isError || (!resolveQuery.isLoading && !organizationId) || organizationQuery.isError;
 

@@ -51,7 +51,7 @@ export async function apiRequest<T>(path: string, config: RequestConfig = {}): P
   });
 
   const contentType = response.headers.get("content-type") ?? "";
-  let payload: any = null;
+  let payload: unknown = null;
   if (contentType.includes("application/json") && response.status !== 204) {
     const text = await response.text();
     payload = text ? JSON.parse(text) : null;

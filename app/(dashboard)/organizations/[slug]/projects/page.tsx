@@ -19,7 +19,7 @@ export default function ProjectsPage() {
 
   const resolveQuery = useOrganizationBySlug(slug);
   const organizationId = resolveQuery.data?.id;
-  const myRole = (resolveQuery.data as any)?.myRole;
+  const myRole = resolveQuery.data?.myRole;
   const perms = getOrgPermissions(myRole);
 
   const projectsQuery = useProjectsQuery(organizationId as string);
