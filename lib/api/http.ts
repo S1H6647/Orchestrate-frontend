@@ -58,7 +58,7 @@ export async function apiRequest<T>(path: string, config: RequestConfig = {}): P
   }
 
   if (!response.ok) {
-    if (response.status === 401 && typeof window !== "undefined") {
+    if (response.status === 401 && auth && typeof window !== "undefined") {
       window.location.href = "/login";
     }
     throw normalizeError(payload, response.status, "Request failed");
