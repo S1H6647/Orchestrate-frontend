@@ -26,6 +26,7 @@ import {
   updateOrganizationProfile,
   validateInvitation,
 } from "@/lib/api/organizations";
+import { GetOrganizationMembersParams } from "@/lib/api/organizations";
 import { queryKeys } from "@/lib/query/keys";
 
 export function useMyOrganizationsQuery() {
@@ -53,10 +54,10 @@ export function useOrganizationQuery(organizationId: string) {
   });
 }
 
-export function useOrganizationMembersQuery(organizationId: string) {
+export function useOrganizationMembersQuery(organizationId: string, params: GetOrganizationMembersParams = {}) {
   return useQuery({
-    queryKey: queryKeys.members(organizationId),
-    queryFn: () => getOrganizationMembers(organizationId),
+    queryKey: [...queryKeys.members(organizationId), params],
+    queryFn: () => getOrganizationMembers(organizationId, params),
     enabled: !!organizationId,
   });
 }
@@ -230,10 +231,10 @@ export function useOrganizationBySlug(slug?: string) {
   
   const myRole = useMemo(() => {
     if (organization?.myRole) return organization.myRole;
-    
+
     const meEmail = meQuery.data?.email;
     if (!meEmail || !membersQuery.data) return null;
-    return membersQuery.data.find((m) => m.user.email === meEmail)?.role ?? null;
+    return membersQuery.data.content.find((m) => m.user.email === meEmail)?.role ?? null;
   }, [organization?.myRole, meQuery.data?.email, membersQuery.data]);
 
   return {

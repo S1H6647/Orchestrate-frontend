@@ -1,5 +1,7 @@
 import { apiRequest } from "@/lib/api/http";
 import {
+  AllMemberStatus,
+  AllOrganizationRole,
   CreateOrganizationRequest,
   MemberAddedToOrganizationResponse,
   InvitationResponse,
@@ -8,6 +10,7 @@ import {
   OrganizationMember,
   OrganizationResponse,
   OrganizationSummary,
+  Page,
   SuccessResponse,
   UpdateMemberRoleRequest,
   UpdateOrganizationIdentityRequest,
@@ -40,8 +43,20 @@ export function getOrganization(organizationId: string) {
   return apiRequest<OrganizationResponse>(`/organizations/${organizationId}`, { auth: true });
 }
 
-export function getOrganizationMembers(organizationId: string) {
-  return apiRequest<OrganizationMember[]>(`/organizations/${organizationId}/members`, { auth: true });
+export type GetOrganizationMembersParams = {
+  status?: AllMemberStatus;
+  role?: AllOrganizationRole;
+  q?: string;
+  page?: number;
+  size?: number;
+  sortBy?: string;
+};
+
+export function getOrganizationMembers(organizationId: string, params: GetOrganizationMembersParams = {}) {
+  return apiRequest<Page<OrganizationMember>>(`/organizations/${organizationId}/members`, {
+    search: params,
+    auth: true,
+  });
 }
 
 export function deleteOrganization(organizationId: string, confirmation: string) {

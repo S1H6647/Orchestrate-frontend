@@ -62,6 +62,19 @@ export type OrganizationRole = "OWNER" | "ADMIN" | "MEMBER" | "VIEWER";
 export type OrganizationStatus = "ACTIVE" | "SUSPENDED" | "DELETED";
 export type Plan = "FREE" | "PRO" | "ENTERPRISE";
 export type MemberStatus = "ACTIVE" | "INVITED" | "REMOVED";
+export type AllMemberStatus = MemberStatus | "ALL";
+export type AllOrganizationRole = OrganizationRole | "ALL";
+
+export type Page<T> = {
+  content: T[];
+  number: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
+  empty: boolean;
+};
 
 export type OrganizationResponse = {
   id: string;
@@ -125,7 +138,7 @@ export type OrganizationMember = {
 
 export type InviteMemberRequest = {
   email: string;
-  role: "OWNER" | "ADMIN" | "MEMBER";
+  role: "MEMBER" | "VIEWER";
 };
 
 export type InvitationResponse = {
