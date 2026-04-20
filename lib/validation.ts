@@ -26,7 +26,7 @@ export const orgSchema = z.object({
 
 export const inviteSchema = z.object({
   email: z.string().email("Enter a valid email"),
-  role: z.enum(["OWNER", "ADMIN", "MEMBER"]),
+  role: z.enum(["MEMBER", "VIEWER"]),
 });
 
 export const projectSchema = z.object({

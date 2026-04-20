@@ -40,7 +40,7 @@ export default function InvitationsPage() {
   const cancelMutation = useCancelInvitationMutation(organizationId as string);
 
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"OWNER" | "ADMIN" | "MEMBER">("MEMBER");
+  const [role, setRole] = useState<"MEMBER" | "VIEWER">("MEMBER");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [cancelInviteId, setCancelInviteId] = useState<string | null>(null);
@@ -148,11 +148,10 @@ export default function InvitationsPage() {
               <Select
                 id="inviteRole"
                 value={role}
-                onChange={(event) => setRole(event.target.value as "OWNER" | "ADMIN" | "MEMBER")}
+                onChange={(event) => setRole(event.target.value as "MEMBER" | "VIEWER")}
               >
-                <option value="OWNER">OWNER</option>
-                <option value="ADMIN">ADMIN</option>
                 <option value="MEMBER">MEMBER</option>
+                <option value="VIEWER">VIEWER</option>
               </Select>
             </FormField>
           </div>
