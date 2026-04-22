@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
 import { Fraunces, Inter } from "next/font/google";
+import { config } from "@fortawesome/fontawesome-svg-core";
+import "@fortawesome/fontawesome-svg-core/styles.css";
 import { Providers } from "@/components/providers";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
+
+config.autoAddCss = false;
 
 const headingFont = Fraunces({
   variable: "--font-heading",

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useMemo, useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { z } from "zod";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Alert } from "@/components/ui/alert";
@@ -61,6 +63,10 @@ export default function LoginPage() {
     }
   }
 
+  function continueWithGoogle() {
+    window.location.assign("/api/auth/oauth2/google");
+  }
+
   return (
     <AuthShell
       title="Login to Orchestrate"
@@ -100,7 +106,23 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <Link href="/verify" style={{ color: "#214f95", fontWeight: 600 }}>
+      <div className="auth-divider">
+        <div className="auth-divider-line" />
+        <span className="auth-divider-text">or continue with</span>
+        <div className="auth-divider-line" />
+      </div>
+
+      <Button
+        type="button"
+        variant="outline"
+        onClick={continueWithGoogle}
+        icon={<FontAwesomeIcon icon={faGoogle} />}
+        className="auth-google-btn"
+      >
+        Continue with Google
+      </Button>
+
+      <Link href="/verify" className="auth-verify-link">
         Didn&apos;t get the verification email?
       </Link>
     </AuthShell>
