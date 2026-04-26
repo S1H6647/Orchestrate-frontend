@@ -232,7 +232,6 @@ function ProfileSection({ organizationId, initialData }: { organizationId: strin
   const [description, setDescription] = useState(initialData.description || "");
   const [websiteUrl, setWebsiteUrl] = useState(initialData.websiteUrl || "");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [generalError, setGeneralError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -258,7 +257,6 @@ function ProfileSection({ organizationId, initialData }: { organizationId: strin
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setFieldErrors({});
-    setGeneralError(null);
 
     const parsed = orgSchema.pick({ description: true, websiteUrl: true }).safeParse({ description, websiteUrl });
     if (!parsed.success) {
@@ -285,10 +283,10 @@ function ProfileSection({ organizationId, initialData }: { organizationId: strin
       setImage(null);
     } catch (error) {
       if (error instanceof ApiClientError) {
-        setGeneralError(error.message);
         setFieldErrors(error.details ?? {});
+        push({ title: "Update failed", description: error.message, kind: "error" });
       } else {
-        setGeneralError("Update failed.");
+        push({ title: "Update failed", description: "Profile update failed.", kind: "error" });
       }
     }
   }
@@ -307,7 +305,6 @@ function ProfileSection({ organizationId, initialData }: { organizationId: strin
         </div>
       </div>
       <form className="form-grid" onSubmit={onSubmit} style={{ gap: "28px" }}>
-        {generalError && <Alert tone="error">{generalError}</Alert>}
 
         {/* Improved Logo Section */}
         <div style={{ 
@@ -420,7 +417,6 @@ function IdentitySection({ organizationId, initialData }: { organizationId: stri
   const [name, setName] = useState(initialData.name || "");
   const [slug, setSlug] = useState(initialData.slug || "");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [generalError, setGeneralError] = useState<string | null>(null);
 
   useEffect(() => {
     setName(initialData.name || "");
@@ -434,7 +430,6 @@ function IdentitySection({ organizationId, initialData }: { organizationId: stri
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setFieldErrors({});
-    setGeneralError(null);
 
     const parsed = orgSchema.pick({ name: true, slug: true }).safeParse({ name, slug });
     if (!parsed.success) {
@@ -459,15 +454,16 @@ function IdentitySection({ organizationId, initialData }: { organizationId: stri
     } catch (error) {
       if (error instanceof ApiClientError) {
         if (error.status === 403) {
-           setGeneralError("You do not have permission to change these settings.");
+           push({ title: "Permission denied", description: "You do not have permission to change these settings.", kind: "error" });
         } else if (error.status === 409 || (error.message && error.message.toLowerCase().includes("slug"))) {
            setFieldErrors({ slug: "This slug is already in use by another organization." });
+           push({ title: "Identity update failed", description: "This slug is already in use.", kind: "error" });
         } else {
-           setGeneralError(error.message);
            setFieldErrors(error.details ?? {});
+           push({ title: "Identity update failed", description: error.message, kind: "error" });
         }
       } else {
-        setGeneralError("Update failed.");
+        push({ title: "Identity update failed", description: "Update failed.", kind: "error" });
       }
     }
   }
@@ -484,7 +480,6 @@ function IdentitySection({ organizationId, initialData }: { organizationId: stri
         </div>
       </div>
       <form className="form-grid" onSubmit={onSubmit} style={{ gap: "20px" }}>
-        {generalError && <Alert tone="error">{generalError}</Alert>}
 
         <FormField label="Organization Name" htmlFor="name" error={fieldErrors.name}>
           <Input 

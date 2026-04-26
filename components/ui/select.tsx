@@ -3,12 +3,19 @@ import { cn } from "@/lib/utils";
 
 type Props = SelectHTMLAttributes<HTMLSelectElement> & {
   error?: string;
+  options?: { label: string; value: string | number }[];
 };
 
-export function Select({ className, error, children, ...props }: Props) {
+export function Select({ className, error, options, children, ...props }: Props) {
   return (
     <select className={cn("select", error && "input-error", className)} {...props}>
-      {children}
+      {options
+        ? options.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))
+        : children}
     </select>
   );
 }

@@ -24,32 +24,29 @@ export function TransferOwnershipModal({ open, onClose, organizationId }: Props)
 
   const [selectedMemberId, setSelectedMemberId] = useState("");
   const [isConfirmed, setIsConfirmed] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleTransfer = async () => {
     if (!selectedMemberId) {
-      setError("Please select a member to transfer ownership to.");
+      push({ title: "Transfer failed", description: "Please select a member to transfer ownership to.", kind: "error" });
       return;
     }
     if (!isConfirmed) {
-      setError("You must confirm that you understand the implications.");
+      push({ title: "Transfer failed", description: "You must confirm that you understand the implications.", kind: "error" });
       return;
     }
 
     try {
-      setError(null);
       await transferMutation.mutateAsync(selectedMemberId);
       push({ title: "Ownership transferred successfully.", kind: "success" });
       onClose();
       // Optionally refresh page or redirect
       window.location.reload();
     } catch (err) {
-      if (err instanceof ApiClientError) {
-        setError(err.message);
-      } else {
-        setError("An unexpected error occurred.");
-      }
-      push({ title: "Transfer failed", description: err instanceof Error ? err.message : "Unknown error", kind: "error" });
+      push({ 
+        title: "Transfer failed", 
+        description: err instanceof ApiClientError ? err.message : "An unexpected error occurred.", 
+        kind: "error" 
+      });
     }
   };
 
@@ -68,7 +65,6 @@ export function TransferOwnershipModal({ open, onClose, organizationId }: Props)
       confirmDisabled={!selectedMemberId || !isConfirmed || transferMutation.isPending}
     >
       <div className="form-grid">
-        {error && <Alert tone="error">{error}</Alert>}
         
         <p style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "8px" }}>
           Transferring ownership will grant full administrator privileges to the selected member. 

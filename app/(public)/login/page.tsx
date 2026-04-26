@@ -25,14 +25,13 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [generalError, setGeneralError] = useState<string | null>(null);
 
   const canSubmit = useMemo(() => email.length > 0 && password.length > 0, [email, password]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFieldErrors({});
-    setGeneralError(null);
+    setFieldErrors({});
 
     const parsed = schema.safeParse({ email, password });
     if (!parsed.success) {
@@ -53,12 +52,12 @@ export default function LoginPage() {
       router.replace("/organizations");
     } catch (error) {
       if (error instanceof ApiClientError) {
-        setGeneralError(error.message);
         setFieldErrors(error.details ?? {});
+        push({ title: "Login failed", description: error.message, kind: "error" });
       } else if (error instanceof z.ZodError) {
-        setGeneralError("Invalid form input");
+        push({ title: "Login failed", description: "Invalid form input", kind: "error" });
       } else {
-        setGeneralError("Could not sign in. Please try again.");
+        push({ title: "Login failed", description: "Could not sign in. Please try again.", kind: "error" });
       }
     }
   }
@@ -75,7 +74,6 @@ export default function LoginPage() {
       alternateHref="/register"
     >
       <form onSubmit={onSubmit} className="form-grid" noValidate>
-        {generalError ? <Alert tone="error">{generalError}</Alert> : null}
 
         <FormField label="Email" htmlFor="email" error={fieldErrors.email}>
           <Input

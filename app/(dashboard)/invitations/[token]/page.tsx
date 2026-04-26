@@ -23,21 +23,18 @@ export default function InvitationTokenPage() {
   const acceptMutation = useAcceptInvitationMutation();
   const declineMutation = useDeclineInvitationMutation();
 
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
 
   useEffect(() => {
     validateMutation
       .mutateAsync(token)
       .then((response) => {
-        setStatusMessage(response.message);
+        push({ title: response.message, kind: "success" });
       })
       .catch((error) => {
-        if (error instanceof ApiClientError) {
-          setStatusError(error.message);
-        } else {
-          setStatusError("Unable to validate invitation token.");
-        }
+        const message = error instanceof ApiClientError ? error.message : "Unable to validate invitation token.";
+        setStatusError(message);
+        push({ title: "Validation failed", description: message, kind: "error" });
       });
   }, [token, validateMutation]);
 
@@ -50,7 +47,6 @@ export default function InvitationTokenPage() {
 
       <Card className="stack">
         {validateMutation.isPending ? <Alert tone="info">Validating token...</Alert> : null}
-        {statusMessage ? <Alert tone="success">{statusMessage}</Alert> : null}
         {statusError ? <Alert tone="error">{statusError}</Alert> : null}
 
         <div className="row">
@@ -64,11 +60,8 @@ export default function InvitationTokenPage() {
                 push({ title: "Invitation accepted", kind: "success" });
                 router.replace("/organizations");
               } catch (error) {
-                if (error instanceof ApiClientError) {
-                  setStatusError(error.message);
-                } else {
-                  setStatusError("Unable to accept invitation.");
-                }
+                const message = error instanceof ApiClientError ? error.message : "Unable to accept invitation.";
+                push({ title: "Failed to accept", description: message, kind: "error" });
               }
             }}
           >
@@ -85,11 +78,8 @@ export default function InvitationTokenPage() {
                 push({ title: "Invitation declined", kind: "info" });
                 router.replace("/organizations");
               } catch (error) {
-                if (error instanceof ApiClientError) {
-                  setStatusError(error.message);
-                } else {
-                  setStatusError("Unable to decline invitation.");
-                }
+                const message = error instanceof ApiClientError ? error.message : "Unable to decline invitation.";
+                push({ title: "Failed to decline", description: message, kind: "error" });
               }
             }}
           >

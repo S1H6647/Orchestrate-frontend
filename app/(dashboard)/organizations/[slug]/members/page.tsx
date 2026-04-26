@@ -26,6 +26,8 @@ import { useMembersParams } from "@/lib/hooks/use-members-params";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import { isStrictlyHigherRole } from "@/lib/auth/roles";
 
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+
 export default function MembersPage() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
@@ -51,6 +53,10 @@ export default function MembersPage() {
   const removeMutation = useRemoveMemberMutation(organizationId as string);
   const restoreMutation = useRestoreMemberMutation(organizationId as string);
 
+  const [showRemoveDialog, setShowRemoveDialog] = useState(false);
+  const [showRestoreDialog, setShowRestoreDialog] = useState(false);
+  const [memberToProcess, setMemberToProcess] = useState<{ id: string, name: string } | null>(null);
+
   const myRole = resolveQuery.data?.myRole;
   const perms = getOrgPermissions(myRole as any);
 
@@ -65,19 +71,25 @@ export default function MembersPage() {
     }
   };
 
-  const handleRemove = async (userId: string) => {
+  const handleRemove = async () => {
+    if (!memberToProcess) return;
     try {
-      await removeMutation.mutateAsync(userId);
+      await removeMutation.mutateAsync(memberToProcess.id);
       push({ title: "Member removed", kind: "success" });
+      setShowRemoveDialog(false);
+      setMemberToProcess(null);
     } catch (err: any) {
       push({ title: "Failed to remove member", description: err.message, kind: "error" });
     }
   };
 
-  const handleRestore = async (userId: string) => {
+  const handleRestore = async () => {
+    if (!memberToProcess) return;
     try {
-      await restoreMutation.mutateAsync(userId);
+      await restoreMutation.mutateAsync(memberToProcess.id);
       push({ title: "Member restored", kind: "success" });
+      setShowRestoreDialog(false);
+      setMemberToProcess(null);
     } catch (err: any) {
       push({ title: "Failed to restore member", description: err.message, kind: "error" });
     }
@@ -124,6 +136,28 @@ export default function MembersPage() {
           </Link>
         )}
       </div>
+
+      <ConfirmDialog
+        open={showRemoveDialog}
+        title="Remove Member"
+        description={`Are you sure you want to remove ${memberToProcess?.name}? They will lose access to all organization resources.`}
+        confirmLabel="Remove Member"
+        tone="danger"
+        onConfirm={handleRemove}
+        onCancel={() => setShowRemoveDialog(false)}
+        loading={removeMutation.isPending}
+      />
+
+      <ConfirmDialog
+        open={showRestoreDialog}
+        title="Restore Member"
+        description={`Do you want to restore access for ${memberToProcess?.name}? They will be able to log back into the organization.`}
+        confirmLabel="Restore Member"
+        tone="primary"
+        onConfirm={handleRestore}
+        onCancel={() => setShowRestoreDialog(false)}
+        loading={restoreMutation.isPending}
+      />
 
       <div className="animate-in slide-in-from-bottom-5 duration-500" style={{ animationDelay: '100ms', animationFillMode: 'both' }}>
         <MembersFilterBar
@@ -202,8 +236,14 @@ export default function MembersPage() {
                     myRole={myRole}
                     perms={perms}
                     onRoleChange={handleRoleChange}
-                    onRemove={handleRemove}
-                    onRestore={handleRestore}
+                    onRemove={(id, name) => {
+                      setMemberToProcess({ id, name });
+                      setShowRemoveDialog(true);
+                    }}
+                    onRestore={(id, name) => {
+                      setMemberToProcess({ id, name });
+                      setShowRestoreDialog(true);
+                    }}
                     isUpdating={updateRoleMutation.isPending || removeMutation.isPending || restoreMutation.isPending}
                   />
                 ))}
@@ -221,8 +261,14 @@ export default function MembersPage() {
                 myRole={myRole}
                 perms={perms}
                 onRoleChange={handleRoleChange}
-                onRemove={handleRemove}
-                onRestore={handleRestore}
+                onRemove={(id, name) => {
+                  setMemberToProcess({ id, name });
+                  setShowRemoveDialog(true);
+                }}
+                onRestore={(id, name) => {
+                  setMemberToProcess({ id, name });
+                  setShowRestoreDialog(true);
+                }}
                 isUpdating={updateRoleMutation.isPending || removeMutation.isPending || restoreMutation.isPending}
               />
             ))}
@@ -313,8 +359,8 @@ function MemberRow({
   myRole?: OrganizationRole | null;
   perms: ReturnType<typeof getOrgPermissions>;
   onRoleChange: (member: OrganizationMember, role: OrganizationRole) => void;
-  onRemove: (id: string) => void;
-  onRestore: (id: string) => void;
+  onRemove: (id: string, name: string) => void;
+  onRestore: (id: string, name: string) => void;
   isUpdating: boolean;
 }) {
   const isMe = member.user.email === myEmail;
@@ -367,7 +413,7 @@ function MemberRow({
                  variant="ghost" 
                  size="sm"
                  className="member-btn-restore"
-                 onClick={() => onRestore(member.user.id)} 
+                 onClick={() => onRestore(member.user.id, member.user.name)} 
                  disabled={isUpdating}
                >
                  Restore
@@ -377,7 +423,7 @@ function MemberRow({
                  variant="ghost" 
                  size="sm"
                  className="member-btn-remove"
-                 onClick={() => onRemove(member.user.id)} 
+                 onClick={() => onRemove(member.user.id, member.user.name)} 
                  disabled={isUpdating}
                  icon={<UserMinus size={14} />}
                >
@@ -406,8 +452,8 @@ function MemberMobileCard({
   myRole?: OrganizationRole | null;
   perms: ReturnType<typeof getOrgPermissions>;
   onRoleChange: (member: OrganizationMember, role: OrganizationRole) => void;
-  onRemove: (id: string) => void;
-  onRestore: (id: string) => void;
+  onRemove: (id: string, name: string) => void;
+  onRestore: (id: string, name: string) => void;
   isUpdating: boolean;
 }) {
   const isMe = member.user.email === myEmail;
@@ -459,11 +505,11 @@ function MemberMobileCard({
         {perms.canRemoveMembers && canMutate && (
           <div style={{ marginTop: 8 }}>
             {member.status === 'REMOVED' ? (
-              <Button style={{ width: '100%' }} variant="outline" className="member-btn-restore" onClick={() => onRestore(member.user.id)} disabled={isUpdating}>
+              <Button style={{ width: '100%' }} variant="outline" className="member-btn-restore" onClick={() => onRestore(member.user.id, member.user.name)} disabled={isUpdating}>
                 Restore Member
               </Button>
             ) : (
-              <Button style={{ width: '100%' }} variant="danger" onClick={() => onRemove(member.user.id)} disabled={isUpdating}>
+              <Button style={{ width: '100%' }} variant="danger" onClick={() => onRemove(member.user.id, member.user.name)} disabled={isUpdating}>
                 Remove from Organization
               </Button>
             )}

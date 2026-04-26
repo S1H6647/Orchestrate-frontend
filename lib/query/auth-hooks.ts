@@ -18,7 +18,15 @@ export function useMeQuery(enabled = true) {
     queryKey: queryKeys.me,
     queryFn: getMe,
     enabled,
-    retry: false,
+    // Retry once so a transient network error during the proxy's 401→refresh
+    // round-trip doesn't immediately clear the user display name.
+    retry: 1,
+    // Fire every 10 min to keep the session alive before the 15-min token expires.
+    // On each interval the proxy transparently refreshes the token if needed.
+    staleTime: 1000 * 60 * 10,
+    refetchInterval: 1000 * 60 * 10,
+    refetchOnWindowFocus: true,
+    refetchIntervalInBackground: false,
   });
 
   useEffect(() => {

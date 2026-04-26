@@ -24,7 +24,15 @@ function useBreadcrumbs() {
       if (rest[0] === "invitations") crumbs.push({ label: "Invitations" });
       if (rest[0] === "projects") {
         crumbs.push({ label: "Projects", href: `/organizations/${orgSlug}/projects` });
-        if (rest[1] === "new") crumbs.push({ label: "New Project" });
+        if (rest[1] === "new") {
+          crumbs.push({ label: "New Project" });
+        } else if (rest[1]) {
+          // rest[1] is [projectSlug]
+          const projectSlug = rest[1];
+          crumbs.push({ label: projectSlug, href: `/organizations/${orgSlug}/projects/${projectSlug}` });
+          if (rest[2] === "members")  crumbs.push({ label: "Members" });
+          if (rest[2] === "settings") crumbs.push({ label: "Settings" });
+        }
       }
     } else if (segments[1] === "new") {
       crumbs.push({ label: "New" });

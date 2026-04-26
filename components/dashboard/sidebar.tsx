@@ -15,11 +15,16 @@ import {
   PanelLeftOpen,
   LogOut,
   LayoutDashboard,
+  ChevronDown,
+  ChevronsUpDown,
+  Plus,
+  Folder,
 } from "lucide-react";
 import { useLogoutMutation, useMeQuery } from "@/lib/query/auth-hooks";
-import { useMyOrganizationsQuery } from "@/lib/query/organization-hooks";
+import { useMyOrganizationsQuery, useOrganizationBySlug } from "@/lib/query/organization-hooks";
+import { useProjectsQuery } from "@/lib/query/project-hooks";
 import { getOrgPermissions } from "@/lib/permissions/org-permissions";
-import type { OrganizationRole, OrganizationSummary } from "@/lib/api/types";
+import type { OrganizationRole, OrganizationSummary, ProjectStatus } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "orchestrate:sidebar-collapsed";
@@ -37,22 +42,64 @@ function getInitials(name?: string | null): string {
 }
 
 interface NavItemProps {
-  href: string;
+  href?: string;
   icon: React.ReactNode;
   label: string;
   isActive: boolean;
   collapsed: boolean;
+  onClick?: (e: React.MouseEvent) => void;
+  isExpandable?: boolean;
+  isExpanded?: boolean;
+  isSubItem?: boolean;
 }
 
-function NavItem({ href, icon, label, isActive, collapsed }: NavItemProps) {
+function NavItem({ 
+  href, 
+  icon, 
+  label, 
+  isActive, 
+  collapsed, 
+  onClick, 
+  isExpandable, 
+  isExpanded,
+  isSubItem 
+}: NavItemProps) {
+  const content = (
+    <>
+      <span className="nav-icon">{icon}</span>
+      {!collapsed && <span className="nav-label">{label}</span>}
+      {isExpandable && !collapsed && (
+        <ChevronDown 
+          size={14} 
+          style={{ marginLeft: "auto", opacity: 0.5, transition: "transform 200ms", transform: isExpanded ? "rotate(180deg)" : "none" }} 
+        />
+      )}
+    </>
+  );
+
+  const className = cn(
+    "nav-item", 
+    isActive && "active", 
+    isSubItem && "sub-item",
+    collapsed && "collapsed-item"
+  );
+
+  if (onClick && !href) {
+    return (
+      <button className={className} onClick={onClick} title={collapsed ? label : undefined}>
+        {content}
+      </button>
+    );
+  }
+
   return (
     <Link
-      href={href}
-      className={cn("nav-item", isActive && "active")}
+      href={href || "#"}
+      className={className}
       title={collapsed ? label : undefined}
+      onClick={onClick}
     >
-      <span className="nav-icon">{icon}</span>
-      <span className="nav-label">{label}</span>
+      {content}
     </Link>
   );
 }
@@ -81,6 +128,8 @@ export function Sidebar() {
   const logoutMutation = useLogoutMutation();
   const organizationsQuery = useMyOrganizationsQuery();
   const [collapsed, setCollapsed] = useState(false);
+  const [isOrgSwitcherOpen, setIsOrgSwitcherOpen] = useState(false);
+  const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setCollapsed(getInitialCollapsed());
@@ -95,29 +144,32 @@ export function Sidebar() {
     });
   }, []);
 
+  const toggleProject = (projectSlug: string) => {
+    setExpandedProjects(prev => ({
+      ...prev,
+      [projectSlug]: !prev[projectSlug]
+    }));
+  };
+
   const orgSlug = params.slug;
   const user = meQuery.data;
+  
+  const orgResolve = useOrganizationBySlug(orgSlug);
+  const activeOrg = orgResolve.data;
+  const perms = getOrgPermissions(activeOrg?.myRole);
+  
+  const projectsQuery = useProjectsQuery(activeOrg?.id as string);
+  const allProjects = projectsQuery.data ?? [];
+  
+  // Filter projects to show only PLANNING and ACTIVE by default
+  const defaultStatuses: ProjectStatus[] = ["PLANNING", "ACTIVE"];
+  const projects = allProjects.filter(p => defaultStatuses.includes(p.status));
+
   const organizations = (organizationsQuery.data ?? []).filter((organization) => {
     const membershipStatus = organization.membershipStatus?.toUpperCase();
     return !membershipStatus || membershipStatus === "ACTIVE";
   });
 
-  const [expandedOrgs, setExpandedOrgs] = useState<Record<string, boolean>>({});
-
-  // Ensure active org is expanded by default
-  useEffect(() => {
-    if (orgSlug) {
-      setExpandedOrgs((prev) => ({ ...prev, [orgSlug]: true }));
-    }
-  }, [orgSlug]);
-
-  const handleOrgClick = (e: React.MouseEvent, slug: string) => {
-    if (slug === orgSlug) {
-      // If we're already on this org, toggle its expansion
-      e.preventDefault();
-      setExpandedOrgs((prev) => ({ ...prev, [slug]: !prev[slug] }));
-    }
-  };
 
   const globalItems: NavItemProps[] = [
     {
@@ -167,6 +219,16 @@ export function Sidebar() {
       });
     }
 
+    if (perms.canViewProjects) {
+      items.push({
+        href: `/organizations/${slug}/projects`,
+        icon: <FolderKanban size={16} />,
+        label: "Projects",
+        isActive: pathname === `/organizations/${slug}/projects`,
+        collapsed,
+      });
+    }
+
     if (perms.canViewMembers) {
       items.push({
         href: `/organizations/${slug}/members`,
@@ -187,109 +249,220 @@ export function Sidebar() {
       });
     }
 
-    if (perms.canViewProjects) {
-      items.push({
-        href: `/organizations/${slug}/projects`,
-        icon: <FolderKanban size={16} />,
-        label: "Projects",
-        isActive: pathname === `/organizations/${slug}/projects`,
-        collapsed,
-      });
-    }
-
-    if (perms.canCreateProject) {
-      items.push({
-        href: `/organizations/${slug}/projects/new`,
-        icon: <FolderPlus size={16} />,
-        label: "New Project",
-        isActive: pathname === `/organizations/${slug}/projects/new`,
-        collapsed,
-      });
-    }
-
     return items;
   };
 
   return (
     <aside className={cn("sidebar", collapsed && "collapsed")}>
-      {/* Header */}
-      <div className="sidebar-header">
-        <div className="sidebar-logo">O</div>
-        <span className="sidebar-brand">Orchestrate</span>
-        <button
-          className="sidebar-toggle"
-          onClick={toggleCollapsed}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+      {/* Header with Switcher */}
+      <div 
+        className={cn("sidebar-header", orgSlug && "has-switcher")}
+        onClick={() => orgSlug && setIsOrgSwitcherOpen(!isOrgSwitcherOpen)}
+        style={{ cursor: orgSlug ? "pointer" : "default" }}
+      >
+        <div 
+          className="sidebar-logo"
+          style={activeOrg ? { background: "var(--primary-soft)", color: "var(--primary)" } : {}}
         >
-          {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-        </button>
+          {activeOrg ? activeOrg.name[0].toUpperCase() : "O"}
+        </div>
+        <div className="sidebar-brand-container">
+          <span className="sidebar-brand">{activeOrg ? activeOrg.name : "Orchestrate"}</span>
+          {orgSlug && <ChevronDown size={14} className={cn("switcher-chevron", isOrgSwitcherOpen && "open")} />}
+        </div>
+        {!collapsed && !orgSlug && (
+          <button
+            className="sidebar-toggle"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleCollapsed();
+            }}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
+        )}
       </div>
+
+      {/* Org Switcher Dropdown */}
+      {isOrgSwitcherOpen && !collapsed && (
+        <div className="org-switcher-dropdown">
+          <div className="org-switcher-label">Switch Organization</div>
+          <div className="org-switcher-list">
+            {organizations.map(org => (
+              <Link 
+                key={org.id}
+                href={`/organizations/${org.slug}`}
+                className={cn("org-switcher-item", org.slug === orgSlug && "active")}
+                onClick={() => setIsOrgSwitcherOpen(false)}
+              >
+                <div className="org-switcher-logo">{org.name[0].toUpperCase()}</div>
+                <div className="org-switcher-name">{org.name}</div>
+                {org.slug === orgSlug && <div className="org-switcher-dot" />}
+              </Link>
+            ))}
+            <div className="divider" style={{ margin: "4px 0" }} />
+            <Link 
+              href="/organizations" 
+              className="org-switcher-item"
+              onClick={() => setIsOrgSwitcherOpen(false)}
+            >
+              <LayoutDashboard size={14} />
+              <div className="org-switcher-name">View All Organizations</div>
+            </Link>
+            <Link 
+              href="/organizations/new" 
+              className="org-switcher-item"
+              onClick={() => setIsOrgSwitcherOpen(false)}
+            >
+              <PlusCircle size={14} />
+              <div className="org-switcher-name">Create New Organization</div>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Nav body */}
       <div className="sidebar-body">
-        <SidebarSection label="General" collapsed={collapsed} items={globalItems} />
-
-        {organizations.length > 0 && (
+        {orgSlug && activeOrg ? (
           <>
-            <div className="divider" style={{ marginTop: "10px", marginBottom: "4px" }} />
-            <div className="sidebar-section-label">My Organizations</div>
-            {organizations.map((org: OrganizationSummary) => {
-              const isActiveOrg = org.slug === orgSlug;
-              const isExpanded = expandedOrgs[org.slug] && isActiveOrg; 
-              // We only render children for the active org currently, but keep state per org.
-              // So if they click it, it toggles.
+            {/* Organization Menu */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+              {getOrgSubItems(activeOrg.slug, activeOrg.myRole || undefined).map((item) => (
+                <NavItem key={item.href} {...item} collapsed={collapsed} />
+              ))}
+            </div>
 
-              return (
-                <div key={org.id} style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <Link
-                    href={`/organizations/${org.slug}`}
-                    className={cn("nav-item", isActiveOrg && "active")}
-                    title={collapsed ? org.name : undefined}
-                    onClick={(e) => handleOrgClick(e, org.slug)}
-                  >
-                    {/* Tiny avatar for org */}
-                    <span 
-                      className="nav-icon"
-                      style={{
-                        width: 18, 
-                        height: 18, 
-                        borderRadius: 4, 
-                        background: "var(--primary-soft)", 
-                        color: "var(--primary)",
-                        fontSize: 10,
-                        fontWeight: 800,
-                      }}
-                    >
-                      {org.name[0].toUpperCase()}
-                    </span>
-                    <span className="nav-label">{org.name}</span>
-                  </Link>
+            <div className="divider" style={{ marginTop: "12px", marginBottom: "12px", opacity: 0.5 }} />
 
-                  {/* Render nested sub items in an animated wrapper */}
-                  <div
-                    className={cn("sidebar-subnav", isExpanded && !collapsed && "expanded")}
-                  >
-                    <div className="sidebar-subnav-inner">
-                      <div style={{ display: "flex", flexDirection: "column", gap: "2px", marginLeft: "12px", borderLeft: "1px solid var(--sidebar-border)", paddingLeft: "10px", marginTop: "4px", marginBottom: "8px" }}>
-                        {getOrgSubItems(org.slug, org.myRole).map((subItem) => (
-                          <Link
-                            key={subItem.href}
-                            href={subItem.href}
-                            className={cn("nav-item", subItem.isActive && "active")}
-                            style={{ padding: "6px 8px", fontSize: "12.5px" }}
-                          >
-                            <span className="nav-icon" style={{ opacity: 0.7 }}>{subItem.icon}</span>
-                            <span className="nav-label">{subItem.label}</span>
-                          </Link>
-                        ))}
-                      </div>
+            {/* Projects Section */}
+            <div className="sidebar-section-header">
+              <div className="sidebar-section-label">Projects</div>
+              {perms.canCreateProject && !collapsed && (
+                <Link href={`/organizations/${orgSlug}/projects/new`} className="sidebar-section-action" title="Create Project">
+                  <Plus size={14} />
+                </Link>
+              )}
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+              {projects.length > 0 ? (
+                // Group projects by status
+                defaultStatuses.map((status) => {
+                  const statusProjects = projects.filter(p => p.status === status);
+                  if (statusProjects.length === 0) return null;
+                  
+                  return (
+                    <div key={status} className="stack" style={{ gap: "4px" }}>
+                      {!collapsed && (
+                        <div style={{ 
+                          fontSize: 10, 
+                          fontWeight: 700, 
+                          color: "var(--text-muted)", 
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                          padding: "4px 8px 2px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px"
+                        }}>
+                          <div style={{ 
+                            width: 6, 
+                            height: 6, 
+                            borderRadius: "50%", 
+                            background: status === "PLANNING" ? "var(--warning)" : "var(--success)" 
+                          }} />
+                          {status === "PLANNING" ? "Planning" : "Active"}
+                          <span style={{ opacity: 0.6, fontWeight: 500 }}>({statusProjects.length})</span>
+                        </div>
+                      )}
+                      {statusProjects.map((project) => {
+                        const isExpanded = expandedProjects[project.slug];
+                        const projectPath = `/organizations/${orgSlug}/projects/${project.slug}`;
+                        
+                        return (
+                          <div key={project.id} className="stack" style={{ gap: "2px" }}>
+                            <NavItem
+                              href={projectPath}
+                              icon={
+                                <div style={{ position: "relative" }}>
+                                  <Folder size={16} />
+                                  {!collapsed && (
+                                    <div style={{ 
+                                      position: "absolute", 
+                                      top: -2, 
+                                      right: -2, 
+                                      width: 6, 
+                                      height: 6, 
+                                      borderRadius: "50%", 
+                                      background: status === "PLANNING" ? "var(--warning)" : "var(--success)",
+                                      border: "1px solid var(--surface)"
+                                    }} />
+                                  )}
+                                </div>
+                              }
+                              label={project.name}
+                              isActive={pathname === projectPath}
+                              collapsed={collapsed}
+                              isExpandable={true}
+                              isExpanded={isExpanded}
+                              onClick={(e) => {
+                                // If clicking on the already active project overview, just toggle
+                                if (pathname === projectPath) {
+                                  e.preventDefault();
+                                  toggleProject(project.slug);
+                                } else {
+                                  // If navigating to a new project, expand it
+                                  setExpandedProjects(prev => ({ ...prev, [project.slug]: true }));
+                                }
+                              }}
+                            />
+                            {isExpanded && !collapsed && (
+                              <div className="sidebar-subnav expanded">
+                                <div className="sidebar-subnav-inner">
+                                  <NavItem
+                                    href={projectPath}
+                                    icon={<LayoutDashboard size={14} />}
+                                    label="Dashboard"
+                                    isActive={pathname === projectPath}
+                                    collapsed={collapsed}
+                                    isSubItem={true}
+                                  />
+                                  <NavItem
+                                    href={`${projectPath}/members`}
+                                    icon={<Users size={14} />}
+                                    label="Team"
+                                    isActive={pathname === `${projectPath}/members`}
+                                    collapsed={collapsed}
+                                    isSubItem={true}
+                                  />
+                                  {(project.myRole === "MANAGER" || activeOrg?.myRole === "OWNER" || activeOrg?.myRole === "ADMIN") && (
+                                    <NavItem
+                                      href={`${projectPath}/settings`}
+                                      icon={<Settings size={14} />}
+                                      label="Settings"
+                                      isActive={pathname === `${projectPath}/settings`}
+                                      collapsed={collapsed}
+                                      isSubItem={true}
+                                    />
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                  </div>
-                </div>
-              );
-            })}
+                  );
+                })
+              ) : !collapsed && (
+                <div className="sidebar-empty-state">No active projects</div>
+              )}
+            </div>
           </>
+        ) : (
+          <SidebarSection label="General" collapsed={collapsed} items={globalItems} />
         )}
       </div>
 

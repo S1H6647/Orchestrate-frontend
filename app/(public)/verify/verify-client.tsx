@@ -20,10 +20,6 @@ export function VerifyClient() {
   const verifyMutation = useVerifyMutation();
   const resendMutation = useResendVerificationMutation();
   const [email, setEmail] = useState(defaultEmail);
-  const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
-  const [verifyError, setVerifyError] = useState<string | null>(null);
-  const [resendMessage, setResendMessage] = useState<string | null>(null);
-  const [resendError, setResendError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) {
@@ -33,32 +29,28 @@ export function VerifyClient() {
     verifyMutation
       .mutateAsync(token)
       .then((response) => {
-        setVerifyMessage(response.message);
-        setVerifyError(null);
+        push({ title: response.message, kind: "success" });
       })
       .catch((error) => {
-        if (error instanceof ApiClientError) {
-          setVerifyError(error.message);
-        } else {
-          setVerifyError("Unable to verify account.");
-        }
+        push({ 
+          title: "Verification failed", 
+          description: error instanceof ApiClientError ? error.message : "Unable to verify account.", 
+          kind: "error" 
+        });
       });
   }, [token, verifyMutation]);
 
   async function onResend(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setResendError(null);
-    setResendMessage(null);
     try {
       const response = await resendMutation.mutateAsync(email);
-      setResendMessage(response.message);
       push({ title: response.message, kind: "success" });
     } catch (error) {
-      if (error instanceof ApiClientError) {
-        setResendError(error.message);
-      } else {
-        setResendError("Unable to resend verification email.");
-      }
+      push({ 
+        title: "Failed to resend", 
+        description: error instanceof ApiClientError ? error.message : "Unable to resend verification email.", 
+        kind: "error" 
+      });
     }
   }
 
@@ -72,8 +64,6 @@ export function VerifyClient() {
       {token ? (
         <div className="stack">
           {verifyMutation.isPending ? <Alert tone="info">Verifying account...</Alert> : null}
-          {verifyMessage ? <Alert tone="success">{verifyMessage}</Alert> : null}
-          {verifyError ? <Alert tone="error">{verifyError}</Alert> : null}
         </div>
       ) : null}
 
@@ -87,8 +77,6 @@ export function VerifyClient() {
             required
           />
         </FormField>
-        {resendMessage ? <Alert tone="success">{resendMessage}</Alert> : null}
-        {resendError ? <Alert tone="error">{resendError}</Alert> : null}
         <Button type="submit" loading={resendMutation.isPending} disabled={!email}>
           Resend verification email
         </Button>

@@ -21,12 +21,11 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [generalError, setGeneralError] = useState<string | null>(null);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFieldErrors({});
-    setGeneralError(null);
+    setFieldErrors({});
 
     const parsed = registerSchema.safeParse({ name, email, password });
     if (!parsed.success) {
@@ -47,10 +46,10 @@ export default function RegisterPage() {
       router.replace(`/verify?email=${encodeURIComponent(parsed.data.email)}`);
     } catch (error) {
       if (error instanceof ApiClientError) {
-        setGeneralError(error.message);
         setFieldErrors(error.details ?? {});
+        push({ title: "Registration failed", description: error.message, kind: "error" });
       } else {
-        setGeneralError("Unable to register right now.");
+        push({ title: "Registration failed", description: "Unable to register right now.", kind: "error" });
       }
     }
   }
@@ -63,7 +62,6 @@ export default function RegisterPage() {
       alternateHref="/login"
     >
       <form className="form-grid" onSubmit={onSubmit} noValidate>
-        {generalError ? <Alert tone="error">{generalError}</Alert> : null}
 
         <FormField label="Name" htmlFor="name" error={fieldErrors.name}>
           <Input id="name" value={name} onChange={(event) => setName(event.target.value)} error={fieldErrors.name} />

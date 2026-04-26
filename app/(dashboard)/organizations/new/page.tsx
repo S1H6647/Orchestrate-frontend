@@ -25,11 +25,9 @@ export default function NewOrganizationPage() {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [image, setImage] = useState<File | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [generalError, setGeneralError] = useState<string | null>(null);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setGeneralError(null);
     setFieldErrors({});
 
     const parsed = orgSchema.safeParse({ name, slug, description, websiteUrl });
@@ -57,10 +55,10 @@ export default function NewOrganizationPage() {
       router.replace(`/organizations/${result.slug}`);
     } catch (error) {
       if (error instanceof ApiClientError) {
-        setGeneralError(error.message);
         setFieldErrors(error.details ?? {});
+        push({ title: "Creation failed", description: error.message, kind: "error" });
       } else {
-        setGeneralError("Could not create organization.");
+        push({ title: "Creation failed", description: "Could not create organization.", kind: "error" });
       }
     }
   }
@@ -82,7 +80,6 @@ export default function NewOrganizationPage() {
           </div>
         </div>
         <form className="form-grid" onSubmit={onSubmit} noValidate>
-          {generalError ? <Alert tone="error">{generalError}</Alert> : null}
 
           <div className="form-grid two">
             <FormField label="Name" htmlFor="name" error={fieldErrors.name}>

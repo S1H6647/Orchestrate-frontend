@@ -1,6 +1,12 @@
 import { NextRequest } from "next/server";
 import { BACKEND_ORIGIN, createBackendUrl } from "@/lib/api/backend";
 import { AUTH_BASE_PATH, SESSION_ACCESS_COOKIE, SESSION_REFRESH_COOKIE } from "@/lib/api/constants";
+import { AuthUser, LoginResponse } from "@/lib/api/types";
+
+// Concurrent refresh synchronization
+const refreshPromises = new Map<string, Promise<LoginResponse | null>>();
+const refreshCache = new Map<string, { result: LoginResponse; expires: number }>();
+const CACHE_TTL = 5000; // 5 seconds grace period for rotated tokens
 
 type ProxyOptions = {
   allowAuthRetry?: boolean;
@@ -58,33 +64,60 @@ async function executeUpstream(url: URL, options: RequestInit) {
   }
 }
 
-async function refreshIfNeeded(request: NextRequest) {
-  const refreshToken = request.cookies.get(SESSION_REFRESH_COOKIE)?.value;
-  if (!refreshToken) {
+async function refreshIfNeeded(request: NextRequest): Promise<LoginResponse | null> {
+  const refreshTokenValue = request.cookies.get(SESSION_REFRESH_COOKIE)?.value;
+  if (!refreshTokenValue) {
     return null;
   }
 
-  const refreshUrl = createBackendUrl(`${AUTH_BASE_PATH}/refresh-token`);
-  refreshUrl.searchParams.set("refreshToken", refreshToken);
-
-  const refreshResponse = await fetch(refreshUrl.toString(), {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-    },
-    cache: "no-store",
-  });
-
-  if (!refreshResponse.ok) {
-    return null;
+  // Check cache for a very recent refresh of this specific token
+  const cached = refreshCache.get(refreshTokenValue);
+  if (cached && cached.expires > Date.now()) {
+    return cached.result;
   }
-  return (await parseJsonSafe(refreshResponse)) as {
-    accessToken: string;
-    refreshToken: string;
-    id: string;
-    name: string;
-    email: string;
-  } | null;
+
+  // Check if a refresh for this token is already in progress
+  const existingPromise = refreshPromises.get(refreshTokenValue);
+  if (existingPromise) {
+    return existingPromise;
+  }
+
+  const promise = (async () => {
+    try {
+      const refreshUrl = createBackendUrl(`${AUTH_BASE_PATH}/refresh-token`);
+      refreshUrl.searchParams.set("refreshToken", refreshTokenValue);
+
+      const refreshResponse = await fetch(refreshUrl.toString(), {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+        cache: "no-store",
+      });
+
+      if (!refreshResponse.ok) {
+        return null;
+      }
+
+      const payload = (await parseJsonSafe(refreshResponse)) as LoginResponse | null;
+      if (payload) {
+        // Cache the result for other concurrent requests that might still have the old token
+        refreshCache.set(refreshTokenValue, {
+          result: payload,
+          expires: Date.now() + CACHE_TTL,
+        });
+      }
+      return payload;
+    } catch (error) {
+      console.error("[Proxy] Refresh token failed:", error);
+      return null;
+    } finally {
+      refreshPromises.delete(refreshTokenValue);
+    }
+  })();
+
+  refreshPromises.set(refreshTokenValue, promise);
+  return promise;
 }
 
 export async function proxyToBackend(
@@ -191,7 +224,7 @@ export async function proxyToBackend(
     return proxyResponse;
   }
 
-  if (path === `${AUTH_BASE_PATH}/login` && response.ok) {
+  if ((path === `${AUTH_BASE_PATH}/login` || path === `${AUTH_BASE_PATH}/refresh-token`) && response.ok) {
     const payload = (await parseJsonSafe(response)) as {
       accessToken: string;
       refreshToken: string;

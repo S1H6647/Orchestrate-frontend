@@ -23,19 +23,17 @@ export function DeleteOrganizationModal({ open, onClose, organizationId, organiz
   const deleteMutation = useDeleteOrganizationMutation();
 
   const [confirmationInput, setConfirmationInput] = useState("");
-  const [error, setError] = useState<string | null>(null);
 
   const confirmationPhrase = `DELETE/${organizationSlug}`;
   const isMatch = confirmationInput === confirmationPhrase;
 
   const handleDelete = async () => {
     if (!isMatch) {
-      setError(`Please type "${confirmationPhrase}" to confirm.`);
+      push({ title: "Deletion failed", description: `Please type "${confirmationPhrase}" to confirm.`, kind: "error" });
       return;
     }
 
     try {
-      setError(null);
       await deleteMutation.mutateAsync({ 
         organizationId, 
         confirmation: confirmationInput 
@@ -48,14 +46,9 @@ export function DeleteOrganizationModal({ open, onClose, organizationId, organiz
       router.push("/organizations");
       router.refresh();
     } catch (err) {
-      if (err instanceof ApiClientError) {
-        setError(err.message);
-      } else {
-        setError("An unexpected error occurred during deletion.");
-      }
       push({ 
         title: "Deletion failed", 
-        description: err instanceof Error ? err.message : "Unknown error", 
+        description: err instanceof ApiClientError ? err.message : "An unexpected error occurred during deletion.", 
         kind: "error" 
       });
     }
@@ -74,7 +67,6 @@ export function DeleteOrganizationModal({ open, onClose, organizationId, organiz
       confirmDisabled={!isMatch || deleteMutation.isPending}
     >
       <div className="form-grid">
-        {error && <Alert tone="error">{error}</Alert>}
         
         <div style={{ padding: "12px", background: "var(--danger-soft)", borderRadius: "var(--radius)", border: "1px solid var(--danger-border)" }}>
           <p style={{ fontSize: "13.5px", fontWeight: 600, color: "var(--danger-text)", marginBottom: "4px" }}>

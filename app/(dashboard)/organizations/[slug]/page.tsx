@@ -203,7 +203,7 @@ export default function OrganizationDetailPage() {
                   (e.currentTarget as HTMLDivElement).style.boxShadow = "";
                 }}
               >
-                <div className="row" style={{ gap: "10px" }}>
+                <div className="stack" style={{ gap: "12px" }}>
                   <div
                     style={{
                       width: 38,
@@ -219,7 +219,7 @@ export default function OrganizationDetailPage() {
                   >
                     {item.icon}
                   </div>
-                  <div>
+                  <div className="stack" style={{ gap: "2px" }}>
                     <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--text)" }}>{item.label}</div>
                     <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{item.desc}</div>
                   </div>

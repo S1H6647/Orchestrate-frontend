@@ -1,42 +1,65 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
-import { Alert } from "@/components/ui/alert";
+import { useState } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { FolderKanban, ArrowLeft, Loader2 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
-import { LoadingState } from "@/components/ui/loading-state";
 import { Select } from "@/components/ui/select";
+import { Alert } from "@/components/ui/alert";
+import { LoadingState } from "@/components/ui/loading-state";
 import { useToast } from "@/components/ui/toast";
-import { ApiClientError } from "@/lib/api/error";
 import { useCreateProjectMutation } from "@/lib/query/project-hooks";
 import { useOrganizationBySlug } from "@/lib/query/organization-hooks";
-import { projectSchema } from "@/lib/validation";
+import { ProjectType, ProjectVisibility } from "@/lib/api/types";
 
-export default function NewProjectPage() {
+export default function CreateProjectPage() {
+  const router = useRouter();
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
-  const router = useRouter();
   const { push } = useToast();
 
-  const resolveQuery = useOrganizationBySlug(slug);
-  const organizationId = resolveQuery.data?.id;
+  const orgResolve = useOrganizationBySlug(slug);
+  const organizationId = orgResolve.data?.id;
 
-  const mutation = useCreateProjectMutation(organizationId as string);
+  const createMutation = useCreateProjectMutation(organizationId as string);
 
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [color, setColor] = useState("#216cce");
-  const [type, setType] = useState<"BASIC" | "KANBAN" | "SCRUM">("BASIC");
-  const [visibility, setVisibility] = useState<"PUBLIC" | "PRIVATE">("PRIVATE");
-  const [startDate, setStartDate] = useState("");
-  const [targetDate, setTargetDate] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [generalError, setGeneralError] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    type: "BASIC" as ProjectType,
+    visibility: "PRIVATE" as ProjectVisibility,
+    color: "#5b6cf9",
+    startDate: "",
+    targetDate: "",
+  });
 
-  if (resolveQuery.isLoading) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!organizationId) return;
+
+    try {
+      const project = await createMutation.mutateAsync(formData);
+      push({ title: "Project created", kind: "success" });
+      router.push(`/organizations/${slug}/projects/${project.slug}`);
+    } catch (err) {
+      push({ 
+        title: "Creation failed", 
+        description: err instanceof Error ? err.message : "Failed to create project. Please try again.", 
+        kind: "error" 
+      });
+    }
+  };
+
+  const colors = [
+    "#5b6cf9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", 
+    "#ec4899", "#06b6d4", "#f97316", "#64748b"
+  ];
+
+  if (orgResolve.isLoading) {
     return (
       <div className="page-shell">
         <LoadingState rows={5} />
@@ -44,144 +67,139 @@ export default function NewProjectPage() {
     );
   }
 
-  if (resolveQuery.isError || (!resolveQuery.isLoading && !organizationId)) {
+  if (orgResolve.isError || !organizationId) {
     return (
       <div className="page-shell">
-        <Alert tone="error">Could not find organization for projects.</Alert>
+        <Alert tone="error">Could not load organization context.</Alert>
       </div>
     );
   }
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setGeneralError(null);
-    setFieldErrors({});
-
-    const parsed = projectSchema.safeParse({
-      name,
-      description,
-      color,
-      type,
-      visibility,
-      startDate,
-      targetDate,
-    });
-
-    if (!parsed.success) {
-      const nextErrors: Record<string, string> = {};
-      parsed.error.issues.forEach((issue) => {
-        const key = issue.path[0];
-        if (typeof key === "string") {
-          nextErrors[key] = issue.message;
-        }
-      });
-      setFieldErrors(nextErrors);
-      return;
-    }
-
-    try {
-      await mutation.mutateAsync({
-        name: parsed.data.name,
-        description: parsed.data.description || undefined,
-        color: parsed.data.color || undefined,
-        type: parsed.data.type,
-        visibility: parsed.data.visibility,
-        startDate: parsed.data.startDate || undefined,
-        targetDate: parsed.data.targetDate || undefined,
-      });
-      push({ title: "Project created", kind: "success" });
-      router.replace(`/organizations/${slug}/projects`);
-    } catch (error) {
-      if (error instanceof ApiClientError) {
-        setGeneralError(error.message);
-        setFieldErrors(error.details ?? {});
-      } else {
-        setGeneralError("Could not create project.");
-      }
-    }
-  }
-
   return (
     <div className="page-shell">
-      <Card>
-        <h1>Create project</h1>
-        <p>Configure project type, visibility, and dates.</p>
-      </Card>
+      <div className="page-header">
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <Link href={`/organizations/${slug}/projects`}>
+            <Button variant="ghost" size="sm" icon={<ArrowLeft size={16} />} />
+          </Link>
+          <div>
+            <h1 className="page-title">Create Project</h1>
+            <p className="page-description">Launch a new initiative for your organization.</p>
+          </div>
+        </div>
+      </div>
 
-      <Card>
-        <form className="form-grid" onSubmit={onSubmit} noValidate>
-          {generalError ? <Alert tone="error">{generalError}</Alert> : null}
+      <div style={{ maxWidth: "680px", margin: "0 auto", width: "100%" }}>
+        <form onSubmit={handleSubmit}>
+          <Card>
+            <div className="stack" style={{ gap: "24px" }}>
+              <div style={{ display: "flex", gap: "24px", alignItems: "flex-start" }}>
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "20px" }}>
+                  <FormField label="Project Name" required>
+                    <Input
+                      placeholder="e.g. Website Redesign"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
+                    />
+                  </FormField>
 
-          <div className="form-grid two">
-            <FormField label="Name" htmlFor="name" error={fieldErrors.name}>
-              <Input id="name" value={name} onChange={(event) => setName(event.target.value)} error={fieldErrors.name} placeholder="Project Alpha" />
-            </FormField>
-            <FormField label="Theme Color" htmlFor="color" error={fieldErrors.color}>
-              <div className="row" style={{ gap: "10px" }}>
-                <input
-                  id="color"
-                  type="color"
-                  value={color}
-                  onChange={(event) => setColor(event.target.value)}
-                  style={{
-                    width: "42px",
-                    height: "42px",
-                    padding: "0",
-                    border: "1px solid var(--border)",
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                    background: "none"
-                  }}
-                />
-                <Input
-                  value={color}
-                  onChange={(event) => setColor(event.target.value)}
-                  placeholder="#000000"
-                  style={{ flex: 1 }}
-                />
+                  <FormField label="Description">
+                    <textarea
+                      className="input"
+                      style={{ height: "100px", padding: "10px", resize: "vertical" }}
+                      placeholder="What is this project about?"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    />
+                  </FormField>
+                </div>
+
+                <div className="stack" style={{ gap: "12px", width: "160px" }}>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>Project Color</span>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
+                    {colors.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, color: c })}
+                        style={{
+                          width: "32px",
+                          height: "32px",
+                          borderRadius: "50%",
+                          background: c,
+                          border: formData.color === c ? "2px solid var(--text)" : "2px solid transparent",
+                          cursor: "pointer",
+                          transition: "all 150ms ease",
+                          padding: 0
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
               </div>
-            </FormField>
-          </div>
 
-          <FormField label="Description" htmlFor="description" error={fieldErrors.description}>
-            <textarea id="description" value={description} onChange={(event) => setDescription(event.target.value)} />
-          </FormField>
+              <div className="form-grid two">
+                <FormField label="Project Type">
+                  <Select
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value as ProjectType })}
+                    options={[
+                      { label: "Basic List", value: "BASIC" },
+                      { label: "Kanban Board", value: "KANBAN" },
+                      { label: "Scrum / Sprints", value: "SCRUM" },
+                    ]}
+                  />
+                </FormField>
 
-          <div className="form-grid two">
-            <FormField label="Type" htmlFor="type">
-              <Select id="type" value={type} onChange={(event) => setType(event.target.value as "BASIC" | "KANBAN" | "SCRUM") }>
-                <option value="BASIC">BASIC</option>
-                <option value="KANBAN">KANBAN</option>
-                <option value="SCRUM">SCRUM</option>
-              </Select>
-            </FormField>
+                <FormField label="Visibility">
+                  <Select
+                    value={formData.visibility}
+                    onChange={(e) => setFormData({ ...formData, visibility: e.target.value as ProjectVisibility })}
+                    options={[
+                      { label: "Private (Invite only)", value: "PRIVATE" },
+                      { label: "Public (All org members)", value: "PUBLIC" },
+                    ]}
+                  />
+                </FormField>
+              </div>
 
-            <FormField label="Visibility" htmlFor="visibility">
-              <Select
-                id="visibility"
-                value={visibility}
-                onChange={(event) => setVisibility(event.target.value as "PUBLIC" | "PRIVATE")}
-              >
-                <option value="PUBLIC">PUBLIC</option>
-                <option value="PRIVATE">PRIVATE</option>
-              </Select>
-            </FormField>
-          </div>
+              <div className="form-grid two">
+                <FormField label="Start Date">
+                  <Input
+                    type="date"
+                    value={formData.startDate}
+                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                  />
+                </FormField>
 
-          <div className="form-grid two">
-            <FormField label="Start date" htmlFor="startDate">
-              <Input id="startDate" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
-            </FormField>
-            <FormField label="Target date" htmlFor="targetDate">
-              <Input id="targetDate" type="date" value={targetDate} onChange={(event) => setTargetDate(event.target.value)} />
-            </FormField>
-          </div>
+                <FormField label="Target Date">
+                  <Input
+                    type="date"
+                    value={formData.targetDate}
+                    onChange={(e) => setFormData({ ...formData, targetDate: e.target.value })}
+                  />
+                </FormField>
+              </div>
 
-          <Button type="submit" loading={mutation.isPending}>
-            Create project
-          </Button>
+
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", borderTop: "1px solid var(--border)", paddingTop: "24px", marginTop: "8px" }}>
+                <Link href={`/organizations/${slug}/projects`}>
+                  <Button variant="ghost" type="button">Cancel</Button>
+                </Link>
+                <Button 
+                  type="submit" 
+                  disabled={createMutation.isPending || !formData.name}
+                  icon={createMutation.isPending ? <Loader2 className="animate-spin" size={18} /> : <FolderKanban size={18} />}
+                >
+                  Create Project
+                </Button>
+              </div>
+            </div>
+          </Card>
         </form>
-      </Card>
+      </div>
     </div>
   );
 }

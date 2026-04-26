@@ -7,6 +7,7 @@ type ButtonSize = "sm" | "md" | "lg";
 
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
+  tone?: "primary" | "danger";
   size?: ButtonSize;
   loading?: boolean;
   icon?: ReactNode;
@@ -14,7 +15,8 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 export function Button({
   className,
-  variant = "primary",
+  variant,
+  tone,
   size = "md",
   loading,
   icon,
@@ -22,9 +24,10 @@ export function Button({
   disabled,
   ...props
 }: Props) {
+  const activeVariant = tone || variant || "primary";
   return (
     <button
-      className={cn("btn", `btn-${variant}`, size === "sm" && "btn-sm", size === "lg" && "btn-lg", className)}
+      className={cn("btn", `btn-${activeVariant}`, size === "sm" && "btn-sm", size === "lg" && "btn-lg", className)}
       disabled={disabled || loading}
       {...props}
     >

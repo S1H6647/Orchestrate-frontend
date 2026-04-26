@@ -175,22 +175,17 @@ export type UpdateMemberRoleRequest = {
   role: OrganizationRole;
 };
 
-export type ProjectType = "BASIC" | "KANBAN" | "SCRUM";
-export type ProjectVisibility = "PUBLIC" | "PRIVATE";
-export type ProjectStatus =
-  | "PLANNING"
-  | "ACTIVE"
-  | "ON_HOLD"
-  | "COMPLETED"
-  | "ARCHIVED";
 export type ProjectRole = "MANAGER" | "CONTRIBUTOR" | "VIEWER";
+export type ProjectStatus = "PLANNING" | "ACTIVE" | "ON_HOLD" | "COMPLETED" | "ARCHIVED";
+export type ProjectVisibility = "PUBLIC" | "PRIVATE";
+export type ProjectType = "BASIC" | "KANBAN" | "SCRUM";
 
 export type ProjectResponse = {
   id: string;
   name: string;
   slug: string;
   description?: string | null;
-  color?: string | null;
+  color: string;
   coverImageUrl?: string | null;
   type: ProjectType;
   visibility: ProjectVisibility;
@@ -198,10 +193,18 @@ export type ProjectResponse = {
   startDate?: string | null;
   targetDate?: string | null;
   organizationId: string;
-  createdBy: string;
-  lead?: string | null;
+  createdBy: { id: string; name: string; email: string };
+  lead?: { id: string; name: string; email: string } | null;
   createdAt: string;
   updatedAt: string;
+  myRole?: ProjectRole;
+};
+
+export type ProjectMember = {
+  id: string;
+  user: { id: string; name: string; email: string };
+  role: ProjectRole;
+  joinedAt: string;
 };
 
 export type CreateProjectRequest = {
@@ -212,4 +215,21 @@ export type CreateProjectRequest = {
   visibility: ProjectVisibility;
   startDate?: string;
   targetDate?: string;
+};
+
+export type UpdateProjectRequest = {
+  name?: string;
+  description?: string;
+  color?: string;
+  coverImageUrl?: string;
+  visibility?: ProjectVisibility;
+  status?: ProjectStatus;
+  startDate?: string;
+  targetDate?: string;
+  leadId?: string;
+};
+
+export type AddProjectMemberRequest = {
+  userId: string;
+  role: ProjectRole;
 };

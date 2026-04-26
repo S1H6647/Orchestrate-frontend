@@ -42,7 +42,6 @@ export default function InvitationsPage() {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"MEMBER" | "VIEWER">("MEMBER");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [generalError, setGeneralError] = useState<string | null>(null);
   const [cancelInviteId, setCancelInviteId] = useState<string | null>(null);
   const [viewInvitation, setViewInvitation] = useState<{
     email: string;
@@ -80,7 +79,6 @@ export default function InvitationsPage() {
 
   async function onInvite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setGeneralError(null);
     setFieldErrors({});
 
     const parsed = inviteSchema.safeParse({ email, role });
@@ -103,10 +101,10 @@ export default function InvitationsPage() {
       setRole("MEMBER");
     } catch (error) {
       if (error instanceof ApiClientError) {
-        setGeneralError(error.message);
         setFieldErrors(error.details ?? {});
+        push({ title: "Invitation failed", description: error.message, kind: "error" });
       } else {
-        setGeneralError("Could not send invitation.");
+        push({ title: "Invitation failed", description: "Could not send invitation.", kind: "error" });
       }
     }
   }
@@ -132,7 +130,6 @@ export default function InvitationsPage() {
           </div>
         </div>
         <form onSubmit={onInvite} className="form-grid" noValidate>
-          {generalError ? <Alert tone="error">{generalError}</Alert> : null}
           <div className="form-grid two">
             <FormField label="Email address" htmlFor="inviteEmail" error={fieldErrors.email}>
               <Input
