@@ -49,7 +49,7 @@ function cleanResponseHeaders(headers: Headers) {
 
 async function executeUpstream(url: URL, options: RequestInit) {
   try {
-    return await fetch(url.toString(), options);
+    return await fetch(url.toString(), { ...options, redirect: "manual" });
   } catch {
     return Response.json(
       {
@@ -62,6 +62,12 @@ async function executeUpstream(url: URL, options: RequestInit) {
       { status: 502 },
     );
   }
+}
+
+function isAuthRedirect(response: Response) {
+  if (response.status !== 302) return false;
+  const location = response.headers.get("location") ?? "";
+  return location.includes("/oauth2/authorize");
 }
 
 async function refreshIfNeeded(request: NextRequest): Promise<LoginResponse | null> {
@@ -96,6 +102,9 @@ async function refreshIfNeeded(request: NextRequest): Promise<LoginResponse | nu
       });
 
       if (!refreshResponse.ok) {
+        console.error(`[Proxy] Refresh token failed: ${refreshResponse.status} ${refreshResponse.statusText}`);
+        const text = await refreshResponse.text();
+        console.error(`[Proxy] Refresh response body: ${text}`);
         return null;
       }
 
@@ -181,7 +190,7 @@ export async function proxyToBackend(
 
   let response = await execute();
 
-  if (response.status === 401 && requiresAuth && allowAuthRetry) {
+  if ((response.status === 401 || isAuthRedirect(response)) && requiresAuth && allowAuthRetry) {
     const refreshed = await refreshIfNeeded(request);
     if (!refreshed) {
       const unauthorized = Response.json(

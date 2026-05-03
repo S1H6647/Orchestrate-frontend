@@ -154,17 +154,19 @@ export default function ProjectOverviewPage() {
 
           {/* Quick Access to Views (Placeholder for future Project specific views) */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-            <Card padding="16px" style={{ cursor: "pointer" }}>
-              <div className="row" style={{ justifyContent: "space-between" }}>
-                <div className="row" style={{ gap: "12px" }}>
-                  <div style={{ padding: "8px", borderRadius: "8px", background: "var(--primary-soft)", color: "var(--primary)" }}>
-                    <LayoutDashboard size={20} />
+            <Link href={`/organizations/${slug}/projects/${projectSlug}/board`} style={{ textDecoration: "none" }}>
+              <Card padding="16px" style={{ cursor: "pointer" }}>
+                <div className="row" style={{ justifyContent: "space-between" }}>
+                  <div className="row" style={{ gap: "12px" }}>
+                    <div style={{ padding: "8px", borderRadius: "8px", background: "var(--primary-soft)", color: "var(--primary)" }}>
+                      <LayoutDashboard size={20} />
+                    </div>
+                    <span style={{ fontWeight: 600 }}>Tasks Board</span>
                   </div>
-                  <span style={{ fontWeight: 600 }}>Tasks Board</span>
+                  <ArrowRight size={16} style={{ color: "var(--text-muted)" }} />
                 </div>
-                <ArrowRight size={16} style={{ color: "var(--text-muted)" }} />
-              </div>
-            </Card>
+              </Card>
+            </Link>
             <Card padding="16px" style={{ cursor: "pointer" }}>
               <div className="row" style={{ justifyContent: "space-between" }}>
                 <div className="row" style={{ gap: "12px" }}>

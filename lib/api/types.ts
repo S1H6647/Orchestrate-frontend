@@ -233,3 +233,70 @@ export type AddProjectMemberRequest = {
   userId: string;
   role: ProjectRole;
 };
+
+export type TaskStatus = "BACKLOG" | "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
+export type TaskPriority = "URGENT" | "HIGH" | "MEDIUM" | "LOW" | "NO_PRIORITY";
+
+export type TaskLabel = {
+  id: string;
+  name: string;
+  color: string;
+};
+
+export type SubTask = {
+  id: string;
+  title: string;
+  completed: boolean;
+};
+
+export type TaskResponse = {
+  id: string;
+  identifier: string; // e.g., "ACME-42"
+  title: string;
+  description?: string | null;
+  status: TaskStatus;
+  priority: TaskPriority;
+  dueDate?: string | null;
+  storyPoints?: number | null;
+  position: number;
+  labels: TaskLabel[];
+  subTasks: SubTask[];
+  parentTask?: { id: string; identifier: string; title: string } | null;
+  assignee?: { id: string; name: string; email: string; avatarUrl?: string | null } | null;
+  reporter: { id: string; name: string; email: string; avatarUrl?: string | null };
+  projectId: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateTaskRequest = {
+  title: string;
+  description?: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  dueDate?: string;
+  storyPoints?: number;
+  assigneeId?: string;
+  parentTaskId?: string;
+  labels?: string[]; // label names
+};
+
+export type UpdateTaskRequest = {
+  title?: string;
+  description?: string;
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  dueDate?: string;
+  storyPoints?: number;
+  assigneeId?: string;
+  position?: number;
+};
+
+export type CreateSubTaskRequest = {
+  title: string;
+};
+
+export type UpdateSubTaskRequest = {
+  title?: string;
+  completed?: boolean;
+};

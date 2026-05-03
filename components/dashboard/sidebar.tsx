@@ -19,6 +19,7 @@ import {
   ChevronsUpDown,
   Plus,
   Folder,
+  Kanban,
 } from "lucide-react";
 import { useLogoutMutation, useMeQuery } from "@/lib/query/auth-hooks";
 import { useMyOrganizationsQuery, useOrganizationBySlug } from "@/lib/query/organization-hooks";
@@ -426,6 +427,14 @@ export function Sidebar() {
                                     icon={<LayoutDashboard size={14} />}
                                     label="Dashboard"
                                     isActive={pathname === projectPath}
+                                    collapsed={collapsed}
+                                    isSubItem={true}
+                                  />
+                                  <NavItem
+                                    href={`${projectPath}/board`}
+                                    icon={<Kanban size={14} />}
+                                    label="TaskBoard"
+                                    isActive={pathname === `${projectPath}/board`}
                                     collapsed={collapsed}
                                     isSubItem={true}
                                   />
