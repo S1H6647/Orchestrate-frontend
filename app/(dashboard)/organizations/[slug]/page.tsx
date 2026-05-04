@@ -7,14 +7,22 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { LoadingState } from "@/components/ui/loading-state";
-import {
-  useOrganizationQuery,
-  useOrganizationBySlug,
-} from "@/lib/query/organization-hooks";
+import { useMeQuery } from "@/lib/query/auth-hooks";
+import { useOrganizationBySlug, useOrganizationBySlugQuery } from "@/lib/query/organization-hooks";
 import { getOrgPermissions } from "@/lib/permissions/org-permissions";
 import { toDateLabel } from "@/lib/utils";
 
-const getQuickLinks = (slug: string, perms: ReturnType<typeof getOrgPermissions>) => {
+const getQuickLinks = (
+  slug: string,
+  perms: ReturnType<typeof getOrgPermissions>,
+  isSystemAdmin: boolean,
+) => {
+  if (isSystemAdmin) {
+    return [
+      { href: `/organizations/${slug}/members`, icon: <Users size={16} />, label: "Members", desc: "View members" },
+    ];
+  }
+
   const links = [
     { href: `/organizations/${slug}/members`, icon: <Users size={16} />, label: "Members", desc: "View and manage members" },
     { href: `/organizations/${slug}/projects`, icon: <FolderKanban size={16} />, label: "Projects", desc: "Browse all projects" },
@@ -45,15 +53,17 @@ export default function OrganizationDetailPage() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
 
-  const resolveQuery = useOrganizationBySlug(slug);
-  const organizationId = resolveQuery.data?.id;
-  const myRole = resolveQuery.data?.myRole;
-  const perms = getOrgPermissions(myRole);
+  const meQuery = useMeQuery();
+  const isSystemAdmin = meQuery.data?.systemRole === "SYSTEM_ADMIN";
+  const roleResolve = useOrganizationBySlug(slug);
+  const organizationQuery = useOrganizationBySlugQuery(slug);
+  const perms = getOrgPermissions(isSystemAdmin ? "OWNER" : roleResolve.data?.myRole);
 
-  const organizationQuery = useOrganizationQuery(organizationId as string);
-
-  const isLoading = resolveQuery.isLoading || (!!organizationId && organizationQuery.isLoading);
-  const isError = resolveQuery.isError || (!resolveQuery.isLoading && !organizationId) || organizationQuery.isError;
+  const isLoading =
+    organizationQuery.isLoading ||
+    meQuery.isLoading ||
+    (!isSystemAdmin && roleResolve.isLoading);
+  const isError = organizationQuery.isError || (!isSystemAdmin && roleResolve.isError);
 
   if (isLoading) {
     return (
@@ -105,7 +115,7 @@ export default function OrganizationDetailPage() {
             <p className="page-description">{org.description || "No description provided."}</p>
           </div>
         </div>
-        {perms.canManageOrganizationSettings && (
+        {!isSystemAdmin && perms.canManageOrganizationSettings && (
           <Link href={`/organizations/${slug}/settings`}>
             <Button variant="ghost" size="sm" icon={<Settings size={14} />}>Settings</Button>
           </Link>
@@ -175,7 +185,7 @@ export default function OrganizationDetailPage() {
       <div>
         <h2 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: "var(--text)" }}>Quick Access</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "12px" }}>
-          {getQuickLinks(slug, perms).map((item) => (
+          {getQuickLinks(slug, perms, isSystemAdmin).map((item) => (
             <Link
               key={item.href}
               href={item.href}

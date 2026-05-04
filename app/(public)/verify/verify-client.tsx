@@ -63,7 +63,17 @@ export function VerifyClient() {
     >
       {token ? (
         <div className="stack">
-          {verifyMutation.isPending ? <Alert tone="info">Verifying account...</Alert> : null}
+          {verifyMutation.isPending ? (
+            <Alert tone="info">Verifying account...</Alert>
+          ) : verifyMutation.isSuccess ? (
+            <Alert tone="success">
+              <strong>Account verified successfully!</strong> You have been successfully logged in.
+            </Alert>
+          ) : verifyMutation.isError ? (
+            <Alert tone="error">
+              Verification failed. Please try again or resend a new verification email.
+            </Alert>
+          ) : null}
         </div>
       ) : null}
 

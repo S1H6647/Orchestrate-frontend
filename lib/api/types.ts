@@ -22,6 +22,7 @@ export type AuthUser = {
   email: string;
   avatarUrl?: string | null;
   phone?: string | null;
+  systemRole?: string | null;
 };
 
 export type RegisterRequest = {
@@ -38,6 +39,30 @@ export type RegisterResponse = {
   status: string;
   emailVerified: boolean;
   createdAt: string;
+};
+
+export type UserResponse = {
+  id: string;
+  name: string;
+  email: string;
+  systemRole: string | null;
+  status: string | null;
+  emailVerified: boolean;
+};
+
+export type UserDetailResponse = {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+  phone: string | null;
+  systemRole: string | null;
+  status: string | null;
+  emailVerified: boolean;
+  createdAt: string | null;
+  updatedAt: string | null;
+  lastLoginAt: string | null;
+  authProvider: string | null;
 };
 
 export type LoginRequest = {

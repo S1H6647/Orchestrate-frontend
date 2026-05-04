@@ -11,6 +11,7 @@ export function SideNav() {
   const params = useParams<{ organizationId?: string }>();
   const meQuery = useMeQuery();
   const logoutMutation = useLogoutMutation();
+  const isSystemAdmin = meQuery.data?.systemRole === "SYSTEM_ADMIN";
 
   const orgId = params.organizationId;
   const organizationLinks = orgId
@@ -34,12 +35,18 @@ export function SideNav() {
 
       <nav className="nav-list" aria-label="Main navigation">
         <Link href="/organizations" className={cn("nav-link", pathname === "/organizations" && "active")}>
-          Organizations
+          {isSystemAdmin ? "All Organizations" : "Organizations"}
         </Link>
-        <Link href="/organizations/new" className={cn("nav-link", pathname === "/organizations/new" && "active")}>
-          New Organization
-        </Link>
-        {organizationLinks.map((item) => (
+        {isSystemAdmin ? (
+          <Link href="/users" className={cn("nav-link", pathname === "/users" && "active")}>
+            All Users
+          </Link>
+        ) : (
+          <Link href="/organizations/new" className={cn("nav-link", pathname === "/organizations/new" && "active")}>
+            New Organization
+          </Link>
+        )}
+        {!isSystemAdmin && organizationLinks.map((item) => (
           <Link
             key={item.href}
             href={item.href}

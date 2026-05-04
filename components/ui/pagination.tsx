@@ -47,7 +47,7 @@ export function Pagination({
         <div className="pagination-divider" />
 
         <span className="pagination-info">
-          Showing <strong>{from}-{to}</strong> of <strong>{totalElements}</strong> members
+          Showing <strong>{from}-{to}</strong> of <strong>{totalElements}</strong> items
         </span>
       </div>
 

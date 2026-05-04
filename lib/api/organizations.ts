@@ -17,8 +17,15 @@ import {
   UpdateOrganizationProfileRequest,
 } from "@/lib/api/types";
 
-export function getAllOrganizations() {
-  return apiRequest<OrganizationResponse[]>("/organizations/all", { auth: true });
+export type GetOrganizationsParams = {
+  page?: number;
+  size?: number;
+  sortBy?: string;
+  q?: string;
+};
+
+export function getAllOrganizations(params: GetOrganizationsParams = {}) {
+  return apiRequest<Page<OrganizationResponse>>("/organizations/all", { auth: true, search: params });
 }
 
 export function getMyOrganizations() {
@@ -41,6 +48,10 @@ export function createOrganization(input: CreateOrganizationRequest, image?: Fil
 
 export function getOrganization(organizationId: string) {
   return apiRequest<OrganizationResponse>(`/organizations/${organizationId}`, { auth: true });
+}
+
+export function getOrganizationBySlug(slug: string) {
+  return apiRequest<OrganizationResponse>(`/organizations/slug/${slug}`, { auth: true });
 }
 
 export type GetOrganizationMembersParams = {

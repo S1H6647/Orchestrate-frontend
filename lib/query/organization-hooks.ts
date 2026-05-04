@@ -14,6 +14,7 @@ import {
   getMyInvitations,
   getMyOrganizations,
   getOrganization,
+  getOrganizationBySlug,
   getOrganizationInvitations,
   getOrganizationMembers,
   inviteOrganizationMember,
@@ -26,7 +27,7 @@ import {
   updateOrganizationProfile,
   validateInvitation,
 } from "@/lib/api/organizations";
-import { GetOrganizationMembersParams } from "@/lib/api/organizations";
+import { GetOrganizationMembersParams, GetOrganizationsParams } from "@/lib/api/organizations";
 import { queryKeys } from "@/lib/query/keys";
 
 export function useMyOrganizationsQuery() {
@@ -38,10 +39,10 @@ export function useMyOrganizationsQuery() {
   });
 }
 
-export function useAllOrganizationsQuery(enabled = false) {
+export function useAllOrganizationsQuery(params: GetOrganizationsParams, enabled = false) {
   return useQuery({
-    queryKey: [...queryKeys.organizations, "all"],
-    queryFn: getAllOrganizations,
+    queryKey: [...queryKeys.organizations, "all", params],
+    queryFn: () => getAllOrganizations(params),
     enabled,
   });
 }
@@ -51,6 +52,14 @@ export function useOrganizationQuery(organizationId: string) {
     queryKey: queryKeys.organization(organizationId),
     queryFn: () => getOrganization(organizationId),
     enabled: !!organizationId,
+  });
+}
+
+export function useOrganizationBySlugQuery(slug?: string) {
+  return useQuery({
+    queryKey: [...queryKeys.organizations, "slug", slug],
+    queryFn: () => getOrganizationBySlug(slug as string),
+    enabled: !!slug,
   });
 }
 

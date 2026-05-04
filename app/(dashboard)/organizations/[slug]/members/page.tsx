@@ -16,6 +16,7 @@ import { OrganizationRole, OrganizationMember, MemberStatus } from "@/lib/api/ty
 import { useMeQuery } from "@/lib/query/auth-hooks";
 import {
   useOrganizationBySlug,
+  useOrganizationBySlugQuery,
   useOrganizationMembersQuery,
   useRemoveMemberMutation,
   useRestoreMemberMutation,
@@ -44,7 +45,8 @@ export default function MembersPage() {
   }, [debouncedSearch, queryParams.q, setParams]);
 
   const resolveQuery = useOrganizationBySlug(slug);
-  const organizationId = resolveQuery.data?.id;
+  const organizationDetailQuery = useOrganizationBySlugQuery(slug);
+  const organizationId = organizationDetailQuery.data?.id;
 
   const meQuery = useMeQuery();
   const membersQuery = useOrganizationMembersQuery(organizationId as string, queryParams);
@@ -57,10 +59,14 @@ export default function MembersPage() {
   const [showRestoreDialog, setShowRestoreDialog] = useState(false);
   const [memberToProcess, setMemberToProcess] = useState<{ id: string, name: string } | null>(null);
 
+  const isSystemAdmin = meQuery.data?.systemRole === "SYSTEM_ADMIN";
   const myRole = resolveQuery.data?.myRole;
-  const perms = getOrgPermissions(myRole as any);
+  const perms = getOrgPermissions(isSystemAdmin ? "OWNER" : (myRole as any));
 
-  const isLoading = resolveQuery.isLoading || (!!organizationId && membersQuery.isLoading);
+  const isLoading =
+    organizationDetailQuery.isLoading ||
+    (!isSystemAdmin && resolveQuery.isLoading) ||
+    (!!organizationId && membersQuery.isLoading);
 
   const handleRoleChange = async (member: OrganizationMember, newRole: OrganizationRole) => {
     try {
@@ -103,7 +109,7 @@ export default function MembersPage() {
     );
   }
 
-  if (resolveQuery.isError) {
+  if (organizationDetailQuery.isError || (!isSystemAdmin && resolveQuery.isError)) {
     return (
       <div className="page-shell">
         <Alert tone="error">Organization not found or access denied.</Alert>
@@ -128,7 +134,7 @@ export default function MembersPage() {
             Manage your organization&apos;s team, define roles, and control access levels easily.
           </p>
         </div>
-        {perms.canInviteMembers && (
+        {perms.canInviteMembers && !isSystemAdmin && (
           <Link href={`/organizations/${slug}/invitations`}>
             <Button variant="primary" icon={<UserPlus size={16} />}>
               Invite New Member

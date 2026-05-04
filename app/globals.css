@@ -2288,16 +2288,18 @@ textarea:focus {
 
 /* ─── Kanban Board ───────────────────────────────────────────────────────────── */
 .kanban-board {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 20px;
-  overflow-x: auto;
+  overflow-x: hidden;
   padding-bottom: 20px;
-  align-items: flex-start;
+  align-items: stretch;
   width: 100%;
 }
 
 .kanban-column {
-  flex: 0 0 320px;
+  min-width: 0;
+  width: 100%;
   background: var(--surface-2);
   border-radius: var(--radius-lg);
   display: flex;
@@ -2410,27 +2412,32 @@ textarea:focus {
   backdrop-filter: blur(4px);
   z-index: 1000;
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
 }
 
 .drawer {
   width: 100%;
-  max-width: 600px;
+  max-width: 760px;
   background: var(--surface);
-  height: 100%;
+  max-height: calc(100vh - 48px);
   box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
-  animation: slideInRight 300ms var(--ease);
+  border-radius: var(--radius-lg);
+  animation: drawerPop 200ms var(--ease);
 }
 
-@keyframes slideInRight {
+@keyframes drawerPop {
   from {
-    transform: translateX(100%);
+    transform: translateY(12px);
+    opacity: 0;
   }
 
   to {
-    transform: translateX(0);
+    transform: translateY(0);
+    opacity: 1;
   }
 }
 

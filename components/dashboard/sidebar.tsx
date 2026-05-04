@@ -154,6 +154,7 @@ export function Sidebar() {
 
   const orgSlug = params.slug;
   const user = meQuery.data;
+  const isSystemAdmin = user?.systemRole === "SYSTEM_ADMIN";
   
   const orgResolve = useOrganizationBySlug(orgSlug);
   const activeOrg = orgResolve.data;
@@ -172,29 +173,46 @@ export function Sidebar() {
   });
 
 
-  const globalItems: NavItemProps[] = [
-    {
-      href: "/organizations",
-      icon: <LayoutDashboard size={18} />,
-      label: "Organizations",
-      isActive: pathname === "/organizations",
-      collapsed,
-    },
-    {
-      href: "/organizations/new",
-      icon: <PlusCircle size={18} />,
-      label: "New Organization",
-      isActive: pathname === "/organizations/new",
-      collapsed,
-    },
-    {
-      href: "/invitations",
-      icon: <Mail size={18} />,
-      label: "My Invitations",
-      isActive: pathname === "/invitations" || pathname.startsWith("/invitations/"),
-      collapsed,
-    },
-  ];
+  const globalItems: NavItemProps[] = isSystemAdmin
+    ? [
+        {
+          href: "/organizations",
+          icon: <LayoutDashboard size={18} />,
+          label: "All Organizations",
+          isActive: pathname === "/organizations",
+          collapsed,
+        },
+        {
+          href: "/users",
+          icon: <Users size={18} />,
+          label: "All Users",
+          isActive: pathname === "/users",
+          collapsed,
+        },
+      ]
+    : [
+        {
+          href: "/organizations",
+          icon: <LayoutDashboard size={18} />,
+          label: "Organizations",
+          isActive: pathname === "/organizations",
+          collapsed,
+        },
+        {
+          href: "/organizations/new",
+          icon: <PlusCircle size={18} />,
+          label: "New Organization",
+          isActive: pathname === "/organizations/new",
+          collapsed,
+        },
+        {
+          href: "/invitations",
+          icon: <Mail size={18} />,
+          label: "My Invitations",
+          isActive: pathname === "/invitations" || pathname.startsWith("/invitations/"),
+          collapsed,
+        },
+      ];
 
   const getOrgSubItems = (slug: string, role?: OrganizationRole): NavItemProps[] => {
     const perms = getOrgPermissions(role);
@@ -310,16 +328,18 @@ export function Sidebar() {
               onClick={() => setIsOrgSwitcherOpen(false)}
             >
               <LayoutDashboard size={14} />
-              <div className="org-switcher-name">View All Organizations</div>
+              <div className="org-switcher-name">{isSystemAdmin ? "View All Organizations" : "View Organizations"}</div>
             </Link>
-            <Link 
-              href="/organizations/new" 
-              className="org-switcher-item"
-              onClick={() => setIsOrgSwitcherOpen(false)}
-            >
-              <PlusCircle size={14} />
-              <div className="org-switcher-name">Create New Organization</div>
-            </Link>
+            {!isSystemAdmin && (
+              <Link 
+                href="/organizations/new" 
+                className="org-switcher-item"
+                onClick={() => setIsOrgSwitcherOpen(false)}
+              >
+                <PlusCircle size={14} />
+                <div className="org-switcher-name">Create New Organization</div>
+              </Link>
+            )}
           </div>
         </div>
       )}
@@ -340,7 +360,7 @@ export function Sidebar() {
             {/* Projects Section */}
             <div className="sidebar-section-header">
               <div className="sidebar-section-label">Projects</div>
-              {perms.canCreateProject && !collapsed && (
+              {perms.canCreateProject && !collapsed && !isSystemAdmin && (
                 <Link href={`/organizations/${orgSlug}/projects/new`} className="sidebar-section-action" title="Create Project">
                   <Plus size={14} />
                 </Link>
