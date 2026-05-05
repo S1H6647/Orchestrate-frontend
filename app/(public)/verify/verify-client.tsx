@@ -21,11 +21,14 @@ export function VerifyClient() {
   const resendMutation = useResendVerificationMutation();
   const [email, setEmail] = useState(defaultEmail);
 
+  const [hasRun, setHasRun] = useState(false);
+
   useEffect(() => {
-    if (!token) {
+    if (!token || hasRun) {
       return;
     }
 
+    setHasRun(true);
     verifyMutation
       .mutateAsync(token)
       .then((response) => {
@@ -38,7 +41,7 @@ export function VerifyClient() {
           kind: "error" 
         });
       });
-  }, [token, verifyMutation]);
+  }, [token, hasRun, push, verifyMutation.mutateAsync]);
 
   async function onResend(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
