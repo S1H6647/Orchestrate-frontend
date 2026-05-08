@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useParams } from "next/navigation";
-import { Bell } from "lucide-react";
+import { NotificationBell } from "@/components/ui/notification-bell";
 
 function useBreadcrumbs() {
   const pathname = usePathname();
@@ -63,9 +63,7 @@ export function Topbar() {
       </nav>
 
       <div className="topbar-right">
-        <button className="icon-btn" aria-label="Notifications">
-          <Bell size={20} />
-        </button>
+        <NotificationBell />
       </div>
     </header>
   );

@@ -35,7 +35,7 @@ export function getStompClient() {
     reconnectDelay: 3000,
     heartbeatIncoming: 15000,
     heartbeatOutgoing: 15000,
-    debug: process.env.NODE_ENV === "development" ? (msg) => console.debug("[STOMP]", msg) : undefined,
+    debug: process.env.NODE_ENV !== "production" ? (msg) => console.info("[STOMP]", msg) : undefined,
     beforeConnect: async () => {
       client.brokerURL = await getWebSocketUrl();
     },

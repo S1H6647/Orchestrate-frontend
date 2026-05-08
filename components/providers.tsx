@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactNode, useMemo } from "react";
 import { ToastProvider } from "@/components/ui/toast";
+import { NotificationListener } from "@/components/realtime/notification-listener";
 
 export function Providers({ children }: { children: ReactNode }) {
   const queryClient = useMemo(
@@ -25,7 +26,10 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ToastProvider>{children}</ToastProvider>
+      <ToastProvider>
+        <NotificationListener />
+        {children}
+      </ToastProvider>
     </QueryClientProvider>
   );
 }
