@@ -13,9 +13,20 @@ import {
   deleteSubTask,
   addTaskLabel,
   removeTaskLabel,
+  getComments,
+  createComment,
+  updateComment,
 } from "@/lib/api/tasks";
 import { queryKeys } from "@/lib/query/keys";
-import { CreateTaskRequest, UpdateTaskRequest, CreateSubTaskRequest, UpdateSubTaskRequest, TaskStatus } from "@/lib/api/types";
+import {
+  CreateTaskRequest,
+  UpdateTaskRequest,
+  CreateSubTaskRequest,
+  UpdateSubTaskRequest,
+  TaskStatus,
+  CreateCommentRequest,
+  UpdateCommentRequest,
+} from "@/lib/api/types";
 
 export function useTasksQuery(organizationId: string, projectSlug: string, filters?: { status?: TaskStatus; assigneeId?: string }) {
   return useQuery({
@@ -114,6 +125,35 @@ export function useRemoveTaskLabelMutation(organizationId: string, projectSlug: 
     mutationFn: (labelId: string) => removeTaskLabel(organizationId, projectSlug, taskId, labelId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks(organizationId, projectSlug) });
+    },
+  });
+}
+
+export function useTaskCommentsQuery(organizationId: string, projectSlug: string, taskId: string, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.comments(organizationId, projectSlug, taskId),
+    queryFn: () => getComments(organizationId, projectSlug, taskId),
+    enabled: !!organizationId && !!projectSlug && !!taskId && enabled,
+  });
+}
+
+export function useCreateCommentMutation(organizationId: string, projectSlug: string, taskId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateCommentRequest) => createComment(organizationId, projectSlug, taskId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.comments(organizationId, projectSlug, taskId) });
+    },
+  });
+}
+
+export function useUpdateCommentMutation(organizationId: string, projectSlug: string, taskId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ commentId, payload }: { commentId: string; payload: UpdateCommentRequest }) =>
+      updateComment(organizationId, projectSlug, taskId, commentId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.comments(organizationId, projectSlug, taskId) });
     },
   });
 }

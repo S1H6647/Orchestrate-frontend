@@ -7,6 +7,9 @@ import {
   CreateSubTaskRequest,
   UpdateSubTaskRequest,
   SubTask,
+  CommentResponse,
+  CreateCommentRequest,
+  UpdateCommentRequest,
 } from "@/lib/api/types";
 
 export function getTasks(organizationId: string, projectSlug: string, filters?: { status?: TaskStatus; assigneeId?: string }) {
@@ -99,6 +102,35 @@ export function addTaskLabel(organizationId: string, projectSlug: string, taskId
 export function removeTaskLabel(organizationId: string, projectSlug: string, taskId: string, labelId: string) {
   return apiRequest<void>(`/organizations/${organizationId}/projects/${projectSlug}/tasks/${taskId}/labels/${labelId}`, {
     method: "DELETE",
+    auth: true,
+  });
+}
+
+// Comments
+export function getComments(organizationId: string, projectSlug: string, taskId: string) {
+  return apiRequest<CommentResponse[]>(`/organizations/${organizationId}/projects/${projectSlug}/tasks/${taskId}/comments`, {
+    auth: true,
+  });
+}
+
+export function createComment(organizationId: string, projectSlug: string, taskId: string, input: CreateCommentRequest) {
+  return apiRequest<CommentResponse>(`/organizations/${organizationId}/projects/${projectSlug}/tasks/${taskId}/comments`, {
+    method: "POST",
+    body: input,
+    auth: true,
+  });
+}
+
+export function updateComment(
+  organizationId: string,
+  projectSlug: string,
+  taskId: string,
+  commentId: string,
+  input: UpdateCommentRequest
+) {
+  return apiRequest<CommentResponse>(`/organizations/${organizationId}/projects/${projectSlug}/tasks/${taskId}/comments/${commentId}`, {
+    method: "PATCH",
+    body: input,
     auth: true,
   });
 }

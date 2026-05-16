@@ -7,6 +7,7 @@ export const queryKeys = {
   invitations: (organizationId: string) => ["invitations", organizationId] as const,
   projects: (organizationId: string) => ["projects", organizationId] as const,
   tasks: (organizationId: string, projectSlug: string) => ["projects", organizationId, projectSlug, "tasks"] as const,
+  comments: (organizationId: string, projectSlug: string, taskId: string) => ["projects", organizationId, projectSlug, "tasks", taskId, "comments"] as const,
   myOrganizationContext: ["organizations", "me"] as const,
   myInvitations: ["invitations", "me"] as const,
 };

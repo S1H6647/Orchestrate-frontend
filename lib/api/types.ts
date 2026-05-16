@@ -268,10 +268,26 @@ export type TaskLabel = {
   color: string;
 };
 
+export type UserSummary = {
+  id: string;
+  name: string;
+  email: string;
+};
+
 export type SubTask = {
   id: string;
   title: string;
   completed: boolean;
+};
+
+export type CommentResponse = {
+  id: string;
+  content: string;
+  taskId: string | null;
+  author: UserSummary | null;
+  edited: boolean;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type TaskResponse = {
@@ -324,4 +340,13 @@ export type CreateSubTaskRequest = {
 export type UpdateSubTaskRequest = {
   title?: string;
   completed?: boolean;
+};
+
+export type CreateCommentRequest = {
+  content: string;
+  taskId: string;
+};
+
+export type UpdateCommentRequest = {
+  content: string;
 };

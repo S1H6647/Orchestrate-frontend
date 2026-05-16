@@ -28,7 +28,10 @@ import {
   useUpdateSubTaskMutation,
   useDeleteSubTaskMutation,
   useAddTaskLabelMutation,
-  useRemoveTaskLabelMutation
+  useRemoveTaskLabelMutation,
+  useTaskCommentsQuery,
+  useCreateCommentMutation,
+  useUpdateCommentMutation
 } from "@/lib/query/task-hooks";
 import { useProjectMembersQuery, useProjectQuery } from "@/lib/query/project-hooks";
 import { useOrganizationBySlug } from "@/lib/query/organization-hooks";
@@ -89,6 +92,9 @@ export function KanbanBoard({ organizationId, projectSlug, tasks, isLoading }: P
   
   const addLabel = useAddTaskLabelMutation(organizationId, projectSlug, selectedTask?.id || "");
   const removeLabel = useRemoveTaskLabelMutation(organizationId, projectSlug, selectedTask?.id || "");
+  const commentsQuery = useTaskCommentsQuery(organizationId, projectSlug, selectedTask?.id || "", !!selectedTask?.id);
+  const createComment = useCreateCommentMutation(organizationId, projectSlug, selectedTask?.id || "");
+  const updateComment = useUpdateCommentMutation(organizationId, projectSlug, selectedTask?.id || "");
 
   const filteredTasks = useMemo(() => {
     return tasks.filter(task => {
@@ -409,6 +415,9 @@ export function KanbanBoard({ organizationId, projectSlug, tasks, isLoading }: P
           onDeleteSubTask={(subTaskId) => deleteSubTask.mutate(subTaskId)}
           onAddLabel={(name) => addLabel.mutate(name)}
           onRemoveLabel={(labelId) => removeLabel.mutate(labelId)}
+          comments={commentsQuery.data || []}
+          onAddComment={(content) => createComment.mutate({ content, taskId: selectedTask.id })}
+          onUpdateComment={(commentId, content) => updateComment.mutate({ commentId, payload: { content } })}
           loading={deleteTask.isPending}
         />
       )}

@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Drawer } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import {
   Calendar, CheckCircle2, Flag, Plus, Trash2,
   User, Hash, Clock, X, AlertCircle, Zap,
-  Layers, Edit2
+  Layers, Edit2, MessageSquare, Save
 } from "lucide-react";
-import { TaskResponse, TaskPriority, TaskStatus } from "@/lib/api/types";
+import { CommentResponse, TaskResponse, TaskPriority, TaskStatus } from "@/lib/api/types";
 import { toDateLabel, cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
@@ -25,6 +25,9 @@ type Props = {
   onDeleteSubTask: (subTaskId: string) => void;
   onAddLabel: (name: string) => void;
   onRemoveLabel: (labelId: string) => void;
+  comments: CommentResponse[];
+  onAddComment: (content: string) => void;
+  onUpdateComment: (commentId: string, content: string) => void;
   loading?: boolean;
 };
 
@@ -112,7 +115,9 @@ export function TaskDetailDrawer({
   open, onClose, task, onUpdate, onDelete, onEdit,
   canEditTask = true,
   onAddSubTask, onToggleSubTask, onDeleteSubTask,
-  onAddLabel, onRemoveLabel, loading,
+  onAddLabel, onRemoveLabel,
+  comments, onAddComment, onUpdateComment,
+  loading,
 }: Props) {
   const [newSubTaskTitle, setNewSubTaskTitle] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -121,6 +126,9 @@ export function TaskDetailDrawer({
   const [showRemoveLabelConfirm, setShowRemoveLabelConfirm] = useState(false);
   const [pendingLabelName, setPendingLabelName] = useState("");
   const [pendingLabelId, setPendingLabelId] = useState<string | null>(null);
+  const [newComment, setNewComment] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState("");
 
   const pMeta = PRIORITY_META[task.priority];
   const sMeta = STATUS_META[task.status];
@@ -129,6 +137,9 @@ export function TaskDetailDrawer({
   const subTasks = task.subTasks || [];
   const labels = task.labels || [];
   const completedSubs = subTasks.filter(s => s.completed).length;
+  const sortedComments = useMemo(() => {
+    return [...comments].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }, [comments]);
 
   const handleAddSubTask = (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,6 +153,13 @@ export function TaskDetailDrawer({
     if (!newLabelName.trim()) return;
     setPendingLabelName(newLabelName.trim());
     setShowAddLabelConfirm(true);
+  };
+
+  const handleAddComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim()) return;
+    onAddComment(newComment.trim());
+    setNewComment("");
   };
 
   return (
@@ -324,7 +342,7 @@ export function TaskDetailDrawer({
           </div>
 
           {/* ── Sub-tasks ── */}
-          <div>
+          <div style={{ marginBottom: 28 }}>
             <div style={{
               display: "flex", alignItems: "center", justifyContent: "space-between",
               marginBottom: 12
@@ -391,6 +409,137 @@ export function TaskDetailDrawer({
                 value={newSubTaskTitle}
                 onChange={e => setNewSubTaskTitle(e.target.value)} />
               <Button type="submit" size="sm" variant="secondary" icon={<Plus size={14} />}>Add</Button>
+            </form>
+          </div>
+
+          {/* ── Comments ── */}
+          <div>
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              marginBottom: 12
+            }}>
+              <div style={{
+                display: "flex", alignItems: "center", gap: 8,
+                fontSize: 13, fontWeight: 700, color: "var(--text)",
+                textTransform: "uppercase", letterSpacing: "0.06em"
+              }}>
+                <MessageSquare size={14} /> Comments
+              </div>
+            </div>
+
+            {sortedComments.length === 0 && (
+              <p style={{ fontSize: 13, color: "var(--text-muted)", fontStyle: "italic", padding: "4px 0" }}>
+                No comments yet
+              </p>
+            )}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 14 }}>
+              {sortedComments.map(comment => {
+                const authorName = comment.author?.name || "Unknown";
+                const isEditing = editingCommentId === comment.id;
+                return (
+                  <div key={comment.id} style={{
+                    display: "flex", gap: 10,
+                    padding: "12px 12px",
+                    borderRadius: "var(--radius)",
+                    border: "1px solid var(--border)",
+                    background: "var(--surface-2)",
+                  }}>
+                    <Avatar name={authorName} size={26} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{
+                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                        marginBottom: 6
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{authorName}</span>
+                          <span style={{ fontSize: 12, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6 }}>
+                            {toDateLabel(comment.createdAt)}
+                            {comment.edited && (
+                              <span style={{
+                                fontSize: 11,
+                                fontWeight: 700,
+                                color: "var(--text-muted)",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.06em",
+                                padding: "2px 6px",
+                                borderRadius: 999,
+                                border: "1px solid var(--border)",
+                                background: "var(--surface-1)",
+                              }}>
+                                Edited
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        {canEditTask && (
+                          <button
+                            onClick={() => {
+                              setEditingCommentId(comment.id);
+                              setEditingContent(comment.content);
+                            }}
+                            style={{
+                              background: "none", border: "none", cursor: "pointer",
+                              color: "var(--text-muted)", display: "flex", padding: 2, opacity: 0.7
+                            }}>
+                            <Edit2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                      {isEditing ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                          <textarea
+                            className="input"
+                            value={editingContent}
+                            onChange={e => setEditingContent(e.target.value)}
+                            rows={3}
+                            style={{ fontSize: 13, resize: "vertical" }}
+                          />
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              icon={<Save size={14} />}
+                              onClick={() => {
+                                if (!editingContent.trim()) return;
+                                onUpdateComment(comment.id, editingContent.trim());
+                                setEditingCommentId(null);
+                                setEditingContent("");
+                              }}
+                            >Save</Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setEditingCommentId(null);
+                                setEditingContent("");
+                              }}
+                            >Cancel</Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: 13.5, color: "var(--text-sub)", whiteSpace: "pre-wrap" }}>
+                          {comment.content}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <form onSubmit={handleAddComment} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <textarea
+                className="input"
+                placeholder="Write a comment..."
+                value={newComment}
+                onChange={e => setNewComment(e.target.value)}
+                rows={3}
+                style={{ fontSize: 13, resize: "vertical" }}
+              />
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <Button type="submit" size="sm" variant="secondary" icon={<Plus size={14} />}>Add Comment</Button>
+              </div>
             </form>
           </div>
 
